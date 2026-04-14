@@ -832,7 +832,7 @@ function refreshData() {
   if (!confirm("Clear cached Pokemon data and re-fetch from PokeAPI?")) return;
   lsSet("dg_refresh", { ...refreshLog, [today]: usedToday + 1 });
   for (const key of Object.keys(localStorage)) {
-    if (key.startsWith(CACHE_KEY)) localStorage.removeItem(key);
+    if (key.startsWith(CACHE_KEY) && key !== "dg_refresh") localStorage.removeItem(key);
   }
   pokemonDatabase = {};
   isReady = false;
