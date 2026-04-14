@@ -53,4 +53,3 @@ All files formatted with [Prettier](https://prettier.io) using the default confi
 - Add query link sharing in URL
 - Add more regulations, add Smogon regulations, add generation filters.
 - Notify user if entered move or ability does not exist
-- Domain
