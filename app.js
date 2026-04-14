@@ -271,11 +271,37 @@ async function loadData() {
   }
 
   isReady = true;
+  buildDataLists();
   document.getElementById("prog").value = 100;
   const cacheDate = lsGet(CACHE_KEY + "_date");
   const cacheDateNote = cacheDate ? ` - cached locally on ${cacheDate}` : "";
   document.getElementById("status").textContent =
     `ready - ${Object.keys(pokemonDatabase).length} pokemon${cacheDateNote}`;
+}
+
+function buildDataLists() {
+  const abilities = new Set();
+  const moves = new Set();
+  for (const p of Object.values(pokemonDatabase)) {
+    for (const a of p.abilities) abilities.add(a);
+    for (const m of Object.keys(p.moves)) moves.add(m);
+  }
+
+  function upsertDataList(id, items) {
+    let dl = document.getElementById(id);
+    if (!dl) {
+      dl = document.createElement("datalist");
+      dl.id = id;
+      document.body.appendChild(dl);
+    }
+    dl.innerHTML = [...items]
+      .sort()
+      .map((v) => `<option value="${v}">`)
+      .join("");
+  }
+
+  upsertDataList("ability-datalist", abilities);
+  upsertDataList("move-datalist", moves);
 }
 
 // State
@@ -404,7 +430,7 @@ function renderAbilities() {
       (name, i) => `
       ${i > 0 ? "<small>or</small>" : ""}
       <input type="text" value="${name}" size="18" placeholder="ability name"
-        onchange="abilityFilter[${i}] = this.value">
+        list="ability-datalist" onchange="abilityFilter[${i}] = this.value">
       <button onclick="abilityFilter.splice(${i},1);renderAbilities()">x</button>
     `,
     )
@@ -433,7 +459,7 @@ function renderMoveEntry(move, gi, mi) {
   return `
     ${mi > 0 ? "<small>or</small>" : ""}
     <input type="text" value="${move.name}" size="18" placeholder="move name"
-      onchange="moveGroups[${gi}].moves[${mi}].name = this.value">
+      list="move-datalist" onchange="moveGroups[${gi}].moves[${mi}].name = this.value">
     <label>
       <input type="checkbox" ${move.stab ? "checked" : ""}
         onchange="moveGroups[${gi}].moves[${mi}].stab = this.checked"> stab
@@ -796,7 +822,15 @@ function reset() {
 }
 
 function refreshData() {
+  const today = new Date().toISOString().split("T")[0];
+  const refreshLog = lsGet("dg_refresh") || {};
+  const usedToday = refreshLog[today] || 0;
+  if (usedToday >= 1) {
+    alert("Refresh limit reached (1 per day). Try again tomorrow.");
+    return;
+  }
   if (!confirm("Clear cached Pokemon data and re-fetch from PokeAPI?")) return;
+  lsSet("dg_refresh", { ...refreshLog, [today]: usedToday + 1 });
   for (const key of Object.keys(localStorage)) {
     if (key.startsWith(CACHE_KEY)) localStorage.removeItem(key);
   }
