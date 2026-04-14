@@ -1,0 +1,186 @@
+body {
+  font-family: monospace;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 8px;
+}
+
+body.dark {
+  background: #1a1a1a;
+  color: #ddd;
+}
+body.dark th,
+body.dark td {
+  border-color: #444;
+}
+body.dark fieldset {
+  border-color: #555;
+}
+button {
+  margin-top: 2px;
+}
+
+body.dark input,
+body.dark select,
+body.dark button {
+  background: #2a2a2a;
+  color: #ddd;
+  border-color: #555;
+}
+body.dark .filter-row {
+  border-color: #444;
+}
+
+#status {
+  display: block;
+  margin-bottom: 4px;
+}
+
+#prog {
+  width: 100%;
+  height: 2px;
+  background: #ccc;
+  margin-bottom: 4px;
+}
+
+#table-wrapper {
+  overflow-x: auto;
+}
+
+.tagline {
+  font-size: 12px;
+  font-weight: normal;
+  color: #888;
+}
+
+.dark-label {
+  font-size: 12px;
+  font-weight: normal;
+}
+
+.filter-row {
+  border: 1px solid #ccc;
+  padding: 3px;
+  margin-bottom: 3px;
+}
+
+.type-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+table {
+  border-collapse: collapse;
+  font-size: 12px;
+  width: 100%;
+}
+th,
+td {
+  border: 1px solid #ccc;
+  padding: 2px 6px;
+}
+th {
+  white-space: nowrap;
+  cursor: pointer;
+  text-transform: uppercase;
+  font-size: 11px;
+}
+th.sort-asc::after {
+  content: " ^";
+}
+th.sort-desc::after {
+  content: " v";
+}
+
+.tb {
+  border: 1px solid;
+  font-size: 9px;
+  padding: 0 3px;
+  text-transform: uppercase;
+  display: inline-block;
+  line-height: 14px;
+  margin: 1px;
+}
+
+.ct {
+  font-size: 10px;
+  margin-right: 2px;
+}
+
+.t-normal {
+  color: #888;
+}
+.t-fire {
+  color: #c60;
+}
+.t-water {
+  color: #36c;
+}
+.t-electric {
+  color: #a80;
+}
+.t-grass {
+  color: #484;
+}
+.t-ice {
+  color: #4aa;
+}
+.t-fighting {
+  color: #900;
+}
+.t-poison {
+  color: #808;
+}
+.t-ground {
+  color: #964;
+}
+.t-flying {
+  color: #66c;
+}
+.t-psychic {
+  color: #c36;
+}
+.t-bug {
+  color: #6a0;
+}
+.t-rock {
+  color: #864;
+}
+.t-ghost {
+  color: #639;
+}
+.t-dragon {
+  color: #44c;
+}
+.t-dark {
+  color: #543;
+}
+.t-steel {
+  color: #669;
+}
+.t-fairy {
+  color: #c6a;
+}
+
+.tb {
+  border-color: currentColor;
+}
+
+.sv {
+  text-align: right;
+}
+.dex {
+  color: #aaa;
+  text-align: right;
+}
+.form-col {
+  color: #aaa;
+}
+
+.validators img {
+  border: 0;
+  width: 88px;
+  height: 31px;
+}

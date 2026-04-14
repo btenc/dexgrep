@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>DEXGREP</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <h2>
+      DEXGREP(beta)
+      <small class="tagline">kinda like grep, but for Pokémon</small>
+      <label class="dark-label"
+        ><input
+          type="checkbox"
+          id="dark-cb"
+          onchange="toggleDark(this.checked)"
+        />
+        dark</label
+      >
+    </h2>
+    <small id="status">loading...</small>
+    <progress id="prog" value="0" max="100"></progress>
+
+    <fieldset>
+      <legend>
+        NAME / FORM (rows are AND-ed, strings within a row are OR-ed)
+      </legend>
+      <div id="name-rows"></div>
+      <button onclick="addNameFilter()">+ row</button>
+    </fieldset>
+
+    <fieldset>
+      <legend>TYPE (rows are AND-ed, types within a row are OR-ed)</legend>
+      <div id="pokemon-type-rows"></div>
+      <button onclick="addPokemonTypeRow()">+ row</button>
+    </fieldset>
+
+    <fieldset>
+      <legend>MOVES (rows are AND-ed, moves within a row are OR-ed)</legend>
+      <div id="move-rows"></div>
+      <button onclick="addMoveRow()">+ row</button>
+    </fieldset>
+
+    <fieldset>
+      <legend>
+        TYPE EFFECTIVENESS (rows are AND-ed, ability-aware, * =
+        ability-modified)
+      </legend>
+      <div id="type-rows"></div>
+      <button onclick="addTypeRow()">+ row</button>
+    </fieldset>
+
+    <fieldset>
+      <legend>
+        ABILITY (rows are OR-ed, * = changes matchups, bold = used for matchup
+        columns)
+      </legend>
+      <div id="ability-rows"></div>
+      <button onclick="addAbility()">+ or</button>
+    </fieldset>
+
+    <fieldset>
+      <legend>STATS (rows are AND-ed)</legend>
+      <div id="stat-rows"></div>
+      <button onclick="addStat()">+ row</button>
+    </fieldset>
+
+    <fieldset>
+      <legend>REGULATION</legend>
+      <select id="regulation">
+        <option value="">all</option>
+        <option value="vgc-reg-ma">VGC 2026 Reg M-A</option>
+      </select>
+    </fieldset>
+
+    <fieldset>
+      <legend>SORT</legend>
+      <select id="sort-stat">
+        <option value="id">dex#</option>
+        <option value="hp">hp</option>
+        <option value="atk">atk</option>
+        <option value="def">def</option>
+        <option value="spatk">sp.atk</option>
+        <option value="spdef">sp.def</option>
+        <option value="speed">speed</option>
+        <option value="bst">bst</option>
+      </select>
+      <select id="sort-dir">
+        <option value="asc">asc</option>
+        <option value="desc">desc</option>
+      </select>
+    </fieldset>
+
+    <div>
+      <button onclick="runQuery()"><b>run [enter]</b></button>
+      <button onclick="reset()">reset</button>
+      <button onclick="loadExample()">example</button>
+      <button onclick="refreshData()">refresh data</button>
+    </div>
+
+    <p id="result-count"></p>
+    <div id="table-wrapper">
+      <table id="results-table">
+        <thead>
+          <tr>
+            <th onclick="sortBy('id')" id="th-id">#</th>
+            <th>name</th>
+            <th>form</th>
+            <th>type</th>
+            <th>abilities</th>
+            <th onclick="sortBy('hp')" id="th-hp">hp</th>
+            <th onclick="sortBy('atk')" id="th-atk">atk</th>
+            <th onclick="sortBy('def')" id="th-def">def</th>
+            <th onclick="sortBy('spatk')" id="th-spatk">sp.atk</th>
+            <th onclick="sortBy('spdef')" id="th-spdef">sp.def</th>
+            <th onclick="sortBy('speed')" id="th-speed">spd</th>
+            <th onclick="sortBy('bst')" id="th-bst">bst</th>
+            <th title="immune (0x)">0x</th>
+            <th title="quarter damage (0.25x)">0.25x</th>
+            <th title="half damage (0.5x)">0.5x</th>
+            <th title="double damage (2x)">2x</th>
+            <th title="quadruple damage (4x)">4x</th>
+          </tr>
+        </thead>
+        <tbody id="results-body">
+          <tr>
+            <td colspan="17">run a query to see result(s)</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <script>
+      const FILTERS = {};
+    </script>
+    <script src="filters/vgc-reg-ma.js"></script>
+    <script src="app.js"></script>
+
+    <small
+      >Data from <a href="https://pokeapi.co">PokéAPI</a> (thank you!) - this
+      site last updated: 2026-04-14 -
+      <a href="https://github.com/btenc/dexgrep">README and source</a></small
+    >
+    <p class="validators">
+      <a href="https://validator.w3.org/check?uri=referer"
+        ><img src="https://www.w3.org/Icons/valid-html401" alt="Valid HTML!"
+      /></a>
+      <a href="https://jigsaw.w3.org/css-validator/check/referer"
+        ><img
+          src="https://jigsaw.w3.org/css-validator/images/vcss"
+          alt="Valid CSS!"
+      /></a>
+    </p>
+  </body>
+</html>
