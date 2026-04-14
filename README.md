@@ -3,7 +3,7 @@
 Kinda like grep for Pokémon. Create simple or complex queries that return all Pokémon that match the constraints.
 
 Static site. No build, no dependencies.
-Visit at: TODO or, clone and open `index.html` in a browser.
+Visit at: https://btenc.github.io/dexgrep/ or, clone and open `index.html` in a browser.
 
 ## Usage
 
