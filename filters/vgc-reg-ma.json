@@ -1,4 +1,4 @@
-FILTERS["vgc-reg-ma"] = [
+[
   "venusaur",
   "venusaur-mega",
   "charizard",
@@ -270,5 +270,5 @@ FILTERS["vgc-reg-ma"] = [
   "kingambit",
   "sinistcha",
   "archaludon",
-  "hydrapple",
-];
+  "hydrapple"
+]

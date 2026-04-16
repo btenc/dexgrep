@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>DEXGREP: Team Type Matchups</title>
+    <link rel="icon" type="image/svg+xml" href="../favicon.svg" />
+    <link rel="stylesheet" href="../style.css" />
+  </head>
+  <body>
+    <div id="site-header"></div>
+
+    <fieldset>
+      <legend>FILTER / REGULATION</legend>
+      <select id="filter" onchange="updatePokemonDatalist(this.value)">
+        <option value="">all</option>
+      </select>
+    </fieldset>
+
+    <fieldset>
+      <legend>YOUR TEAM</legend>
+      <div id="team-slots"></div>
+    </fieldset>
+
+    <div>
+      <button onclick="calculateMatchups()"><b>calculate [enter]</b></button>
+      <button onclick="resetMatchups()">reset</button>
+      <button onclick="loadExample()">example</button>
+      <button onclick="refreshData()">refresh data</button>
+    </div>
+
+    <p>
+      <small
+        >ability awareness: matchup modifying abilities are NOT considered by
+        default, unless entered.</small
+      >
+    </p>
+
+    <div id="matchups-grid"></div>
+
+    <div id="site-footer"></div>
+
+    <script src="../js/shared.js"></script>
+    <script src="../js/filters.js"></script>
+    <script src="../js/matchups.js"></script>
+  </body>
+</html>

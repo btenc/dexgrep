@@ -184,3 +184,131 @@ th.sort-desc::after {
   width: 88px;
   height: 31px;
 }
+
+nav {
+  margin: 4px 0 8px;
+  font-size: 12px;
+}
+
+/* Home page tool list */
+.tool-list {
+  list-style: none;
+  padding: 0;
+  margin: 16px 0;
+  line-height: 1.8;
+}
+.tool-list li {
+  margin-bottom: 10px;
+}
+
+/* Team grids */
+.team-grid {
+  overflow-x: auto;
+  margin: 8px 0;
+}
+
+/* Type effectiveness gradients for non-aggregate cells. */
+.eff-0 {
+  background: #aaa;
+  color: #fff;
+}
+.eff-025 {
+  background: #2a9;
+  color: #fff;
+}
+.eff-05 {
+  background: #9d9;
+  color: #000;
+}
+.eff-2 {
+  background: #f80;
+  color: #000;
+}
+.eff-4 {
+  background: #d22;
+  color: #fff;
+}
+
+body.dark .eff-0 {
+  background: #555;
+  color: #ddd;
+}
+body.dark .eff-025 {
+  background: #1a6;
+  color: #fff;
+}
+body.dark .eff-05 {
+  background: #284;
+  color: #ddd;
+}
+body.dark .eff-2 {
+  background: #963;
+  color: #fff;
+}
+body.dark .eff-4 {
+  background: #933;
+  color: #fff;
+}
+
+/* Aggregate row base */
+.agg-row td {
+  font-weight: bold;
+  background: #e8e8e8;
+}
+body.dark .agg-row td {
+  background: #2a2a2a;
+}
+
+/* color gradient for aggregate weakness rows */
+.agg-row td.agg-w1 {
+  background: #ffd0a0;
+  color: #000;
+}
+.agg-row td.agg-w2 {
+  background: #f80;
+  color: #000;
+}
+.agg-row td.agg-w3 {
+  background: #d22;
+  color: #fff;
+}
+
+body.dark .agg-row td.agg-w1 {
+  background: #5a2800;
+  color: #ddd;
+}
+body.dark .agg-row td.agg-w2 {
+  background: #963;
+  color: #fff;
+}
+body.dark .agg-row td.agg-w3 {
+  background: #933;
+  color: #fff;
+}
+
+/* Color gradient for aggregate resist rows */
+.agg-row td.agg-r1 {
+  background: #c8f0c8;
+  color: #000;
+}
+.agg-row td.agg-r2 {
+  background: #9d9;
+  color: #000;
+}
+.agg-row td.agg-r3 {
+  background: #2a9;
+  color: #fff;
+}
+
+body.dark .agg-row td.agg-r1 {
+  background: #0a2a0a;
+  color: #ddd;
+}
+body.dark .agg-row td.agg-r2 {
+  background: #284;
+  color: #ddd;
+}
+body.dark .agg-row td.agg-r3 {
+  background: #185;
+  color: #fff;
+}
