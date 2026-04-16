@@ -1,6 +1,6 @@
 # DEXGREP
 
-Pokédex tools that behaves kinda like `grep` (the globally searching patterns and printing them part).
+Pokédex tools that behave kinda like `grep` (the globally searching patterns and printing them part).
 
 Static site. No build, no dependencies.
 Visit at: https://dexgrep.com/ or clone and run locally (see below).
@@ -89,7 +89,7 @@ All files formatted with [Prettier](https://prettier.io) using the default confi
 Drop a JSON file (array of PokéAPI slugs) into `filters/` and add an entry to `filters/index.json`:
 
 ```json
-{ "id": "your-reg", "name": "Display Name" }
+{ "id": "your-filter", "name": "Display Name" }
 ```
 
 ## TODO
