@@ -1,13 +1,13 @@
 # DEXGREP
 
-Pokédex tools that behave kinda like `grep` (the globally searching patterns and printing them part).
+Pokédex tools that behave kinda like `grep` (the globally searching and printing them part).
 
 Static site. No build, no dependencies.
 Visit at: https://dexgrep.com/ or clone and run locally (see below).
 
-## Tools
+## Tools - More information and examples below
 
-- **Pokémon Search**: main filter tool
+- **Pokémon Search**: filter all Pokémon that match specified criteria, highly configurable
 - **Team Type Matchups**: enter a team and see each member's weaknesses and resistances, with aggregate counts
 
 ## Running Locally
