@@ -105,7 +105,7 @@ function normalizeSlug(str) {
 // URL helpers
 
 function setURLParams(params) {
-  const qs = params.toString();
+  const qs = params.toString().replace(/%2C/gi, ",").replace(/%3A/gi, ":");
   if (qs) {
     history.replaceState(null, "", "?" + qs);
   } else {

@@ -309,7 +309,27 @@ function renderStats() {
     .join("");
 }
 
-// URL param serialization
+// URL sharing
+//
+// The URL encodes the full query so it can be bookmarked or shared.
+//
+// Format rules:
+//   Commas   ( , ) = OR multiple values within one filter row
+//   Repeated key  = AND multiple rows of the same filter
+//
+// Full example:
+//   ?name=includes:mega,mega-x    name includes "mega" OR "mega-x"
+//   &name=excludes:gmax           AND name excludes "gmax"
+//   &ptype=is:fire,dragon         AND pokemon type is fire OR dragon
+//   &moves=thunderbolt.stab,discharge.stab  AND knows thunderbolt OR discharge (with STAB)
+//   &moves=will-o-wisp            AND knows will-o-wisp (no STAB required)
+//   &ability=levitate,flash-fire  AND ability is levitate OR flash-fire
+//   &etype=resists:fire,water     AND resists fire AND water
+//   &etype=weak:electric          AND weak to electric
+//   &stat=speed.gt.80             AND speed > 80
+//   &stat=hp.gte.100              AND hp >= 100
+//   &sort=spatk.desc
+//   &reg=reg-ma
 
 const OP_TO_PARAM = {
   ">": "gt",
@@ -318,120 +338,84 @@ const OP_TO_PARAM = {
   "<=": "lte",
   "=": "eq",
 };
-const PARAM_TO_OP = Object.fromEntries(
-  Object.entries(OP_TO_PARAM).map(function ([k, v]) {
-    return [v, k];
-  }),
-);
+const PARAM_TO_OP = { gt: ">", gte: ">=", lt: "<", lte: "<=", eq: "=" };
+const STAB_SUFFIX = ".stab";
 
-// Serialize a mode:values row format (used by name, ptype, etype filters).
-// Each row is "mode:val1,val2", rows are pipe-separated.
-function serializeModeRows(filters, getValues) {
-  return filters
-    .map(function (f) {
-      return f.mode + ":" + getValues(f).join(",");
-    })
-    .join("|");
+// Splits a "mode:val1,val2" string into its mode and values array.
+// Used by name, ptype, and etype filters which all share this format.
+function parseModeValues(str) {
+  const colonIdx = str.indexOf(":");
+  const mode = str.slice(0, colonIdx);
+  const values = str.slice(colonIdx + 1).split(",");
+  return { mode: mode, values: values };
 }
 
-// Deserialize a mode:values row format back into objects.
-function parseModeRows(param, valuesKey) {
-  return param.split("|").map(function (row) {
-    const [mode, ...rest] = row.split(":");
-    return { mode: mode, [valuesKey]: rest.join(":").split(",") };
-  });
-}
-
+// Saves all active filters into the URL query string.
 function pushFiltersToURL() {
   const params = new URLSearchParams();
 
-  const activeNameFilters = nameFilters.filter(function (f) {
-    return f.texts.some(function (t) {
-      return t.trim();
+  // Name filters
+  for (const f of nameFilters) {
+    const texts = f.texts.filter(function (t) {
+      return t.trim() !== "";
     });
-  });
-  if (activeNameFilters.length > 0) {
-    params.set(
-      "name",
-      serializeModeRows(activeNameFilters, function (f) {
-        return f.texts.filter(function (t) {
-          return t.trim();
-        });
-      }),
-    );
+    if (texts.length > 0) {
+      params.append("name", f.mode + ":" + texts.join(","));
+    }
   }
 
-  const activePTypeFilters = pokemonTypeFilters.filter(function (f) {
-    return f.types.length > 0;
-  });
-  if (activePTypeFilters.length > 0) {
-    params.set(
-      "ptype",
-      serializeModeRows(activePTypeFilters, function (f) {
-        return f.types;
-      }),
-    );
+  // Pokemon type filters
+  for (const f of pokemonTypeFilters) {
+    if (f.types.length > 0) {
+      params.append("ptype", f.mode + ":" + f.types.join(","));
+    }
   }
 
-  const activeMoveGroups = moveGroups.filter(function (g) {
-    return g.moves.some(function (m) {
-      return m.name.trim();
-    });
-  });
-  if (activeMoveGroups.length > 0) {
-    params.set(
-      "moves",
-      activeMoveGroups
-        .map(function (g) {
-          return g.moves
-            .filter(function (m) {
-              return m.name.trim();
-            })
-            .map(function (m) {
-              return m.name.trim() + "." + (m.stab ? "1" : "0");
-            })
-            .join(",");
-        })
-        .join("|"),
-    );
+  // Move groups
+  for (const g of moveGroups) {
+    const entries = [];
+    for (const m of g.moves) {
+      if (m.name.trim() !== "") {
+        let entry = m.name.trim();
+        if (m.stab) {
+          entry = entry + STAB_SUFFIX;
+        }
+        entries.push(entry);
+      }
+    }
+    if (entries.length > 0) {
+      params.append("moves", entries.join(","));
+    }
   }
 
+  // Ability filter
   const activeAbilities = abilityFilter.filter(function (a) {
-    return a.trim();
+    return a.trim() !== "";
   });
   if (activeAbilities.length > 0) {
     params.set("ability", activeAbilities.join(","));
   }
 
-  const activeTypeFilters = typeFilters.filter(function (f) {
-    return f.types.length > 0;
-  });
-  if (activeTypeFilters.length > 0) {
-    params.set(
-      "etype",
-      serializeModeRows(activeTypeFilters, function (f) {
-        return f.types;
-      }),
-    );
+  // Type effectiveness filters
+  for (const f of typeFilters) {
+    if (f.types.length > 0) {
+      params.append("etype", f.mode + ":" + f.types.join(","));
+    }
   }
 
-  if (statFilters.length > 0) {
-    params.set(
-      "stats",
-      statFilters
-        .map(function (f) {
-          return f.stat + "." + OP_TO_PARAM[f.op] + "." + f.val;
-        })
-        .join("|"),
-    );
+  // Stat filters
+  for (const f of statFilters) {
+    params.append("stat", f.stat + "." + OP_TO_PARAM[f.op] + "." + f.val);
   }
 
+  // Sort: only saved when not the default (id, asc)
   const sortStat = document.getElementById("sort-stat").value;
   const sortDir = document.getElementById("sort-dir").value;
   if (sortStat !== "id" || sortDir !== "asc") {
     params.set("sort", sortStat + "." + sortDir);
   }
 
+  // Regulation/format filter
   const filterName = document.getElementById("filter").value;
   if (filterName) {
     params.set("reg", filterName);
@@ -442,43 +426,38 @@ function pushFiltersToURL() {
 
 function loadFiltersFromURL() {
   const params = new URLSearchParams(window.location.search);
+
   if (params.toString() === "") {
     reset();
     return;
   }
 
-  // Name filters
-  const nameParam = params.get("name");
-  if (nameParam) {
-    nameFilters = parseModeRows(nameParam, "texts");
-  } else {
-    nameFilters = [];
+  nameFilters = [];
+  for (const row of params.getAll("name")) {
+    const parsed = parseModeValues(row);
+    nameFilters.push({ mode: parsed.mode, texts: parsed.values });
   }
 
-  // Pokemon type filters
-  const ptypeParam = params.get("ptype");
-  if (ptypeParam) {
-    pokemonTypeFilters = parseModeRows(ptypeParam, "types");
-  } else {
-    pokemonTypeFilters = [];
+  pokemonTypeFilters = [];
+  for (const row of params.getAll("ptype")) {
+    const parsed = parseModeValues(row);
+    pokemonTypeFilters.push({ mode: parsed.mode, types: parsed.values });
   }
 
   // Move groups
-  const movesParam = params.get("moves");
-  if (movesParam) {
-    moveGroups = movesParam.split("|").map(function (group) {
-      return {
-        moves: group.split(",").map(function (entry) {
-          const lastDot = entry.lastIndexOf(".");
-          return {
-            name: entry.substring(0, lastDot),
-            stab: entry.substring(lastDot + 1) === "1",
-          };
-        }),
-      };
-    });
-  } else {
-    moveGroups = [];
+  moveGroups = [];
+  for (const group of params.getAll("moves")) {
+    const moves = [];
+    for (const entry of group.split(",")) {
+      let moveName = entry;
+      let stabRequired = false;
+      if (entry.endsWith(STAB_SUFFIX)) {
+        moveName = entry.slice(0, -STAB_SUFFIX.length);
+        stabRequired = true;
+      }
+      moves.push({ name: moveName, stab: stabRequired });
+    }
+    moveGroups.push({ moves: moves });
   }
 
   // Ability filter
@@ -490,44 +469,52 @@ function loadFiltersFromURL() {
   }
 
   // Type effectiveness filters
-  const etypeParam = params.get("etype");
-  if (etypeParam) {
-    typeFilters = parseModeRows(etypeParam, "types");
-  } else {
-    typeFilters = [];
+  typeFilters = [];
+  for (const row of params.getAll("etype")) {
+    const parsed = parseModeValues(row);
+    typeFilters.push({ mode: parsed.mode, types: parsed.values });
   }
 
-  // Stat filters
-  const statsParam = params.get("stats");
-  if (statsParam) {
-    statFilters = statsParam.split("|").map(function (entry) {
-      const parts = entry.split(".");
-      return {
-        stat: parts[0],
-        op: PARAM_TO_OP[parts[1]] || ">",
-        val: parseInt(parts[2]) || 0,
-      };
-    });
-  } else {
-    statFilters = [];
+  statFilters = [];
+  for (const entry of params.getAll("stat")) {
+    const parts = entry.split(".");
+    const stat = parts[0];
+    const opParam = parts[1];
+    const valStr = parts[2];
+    let op = PARAM_TO_OP[opParam];
+    if (!op) {
+      op = ">";
+    }
+    let val = parseInt(valStr);
+    if (!val) {
+      val = 0;
+    }
+    statFilters.push({ stat: stat, op: op, val: val });
   }
 
   // Sort
   const sortParam = params.get("sort");
+  let lastDot = -1;
   if (sortParam) {
-    const [stat, dir] = sortParam.split(".");
-    document.getElementById("sort-stat").value = stat;
-    document.getElementById("sort-dir").value = dir;
+    lastDot = sortParam.lastIndexOf(".");
+  }
+  if (sortParam && lastDot !== -1) {
+    document.getElementById("sort-stat").value = sortParam.slice(0, lastDot);
+    document.getElementById("sort-dir").value = sortParam.slice(lastDot + 1);
   } else {
     document.getElementById("sort-stat").value = "id";
     document.getElementById("sort-dir").value = "asc";
   }
 
-  // Regulation filter (may be set again after filtersReady resolves)
+  // Regulation/format filter
   const regParam = params.get("reg");
-  document.getElementById("filter").value = regParam || "";
+  if (regParam) {
+    document.getElementById("filter").value = regParam;
+  } else {
+    document.getElementById("filter").value = "";
+  }
 
-  // Render all filter UIs
+  // Re-render all filter UI sections to reflect the loaded state
   renderNameFilters();
   renderPokemonTypeRows();
   renderMoveRows();
@@ -537,7 +524,6 @@ function loadFiltersFromURL() {
 }
 
 function shareQuery(button) {
-  pushFiltersToURL();
   shareCurrentURL(button);
 }
 
