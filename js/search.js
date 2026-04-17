@@ -311,67 +311,107 @@ function renderStats() {
 
 // URL param serialization
 
-const OP_TO_PARAM = { ">": "gt", ">=": "gte", "<": "lt", "<=": "lte", "=": "eq" };
+const OP_TO_PARAM = {
+  ">": "gt",
+  ">=": "gte",
+  "<": "lt",
+  "<=": "lte",
+  "=": "eq",
+};
 const PARAM_TO_OP = Object.fromEntries(
-  Object.entries(OP_TO_PARAM).map(([k, v]) => [v, k]),
+  Object.entries(OP_TO_PARAM).map(function ([k, v]) {
+    return [v, k];
+  }),
 );
+
+// Serialize a mode:values row format (used by name, ptype, etype filters).
+// Each row is "mode:val1,val2", rows are pipe-separated.
+function serializeModeRows(filters, getValues) {
+  return filters
+    .map(function (f) {
+      return f.mode + ":" + getValues(f).join(",");
+    })
+    .join("|");
+}
+
+// Deserialize a mode:values row format back into objects.
+function parseModeRows(param, valuesKey) {
+  return param.split("|").map(function (row) {
+    const [mode, ...rest] = row.split(":");
+    return { mode: mode, [valuesKey]: rest.join(":").split(",") };
+  });
+}
 
 function pushFiltersToURL() {
   const params = new URLSearchParams();
 
-  const activeNameFilters = nameFilters.filter(
-    (f) => f.texts.some((t) => t.trim()),
-  );
+  const activeNameFilters = nameFilters.filter(function (f) {
+    return f.texts.some(function (t) {
+      return t.trim();
+    });
+  });
   if (activeNameFilters.length > 0) {
     params.set(
       "name",
-      activeNameFilters
-        .map((f) => f.mode + ":" + f.texts.filter((t) => t.trim()).join(","))
-        .join("|"),
+      serializeModeRows(activeNameFilters, function (f) {
+        return f.texts.filter(function (t) {
+          return t.trim();
+        });
+      }),
     );
   }
 
-  const activePTypeFilters = pokemonTypeFilters.filter(
-    (f) => f.types.length > 0,
-  );
+  const activePTypeFilters = pokemonTypeFilters.filter(function (f) {
+    return f.types.length > 0;
+  });
   if (activePTypeFilters.length > 0) {
     params.set(
       "ptype",
-      activePTypeFilters
-        .map((f) => f.mode + ":" + f.types.join(","))
-        .join("|"),
+      serializeModeRows(activePTypeFilters, function (f) {
+        return f.types;
+      }),
     );
   }
 
-  const activeMoveGroups = moveGroups.filter(
-    (g) => g.moves.some((m) => m.name.trim()),
-  );
+  const activeMoveGroups = moveGroups.filter(function (g) {
+    return g.moves.some(function (m) {
+      return m.name.trim();
+    });
+  });
   if (activeMoveGroups.length > 0) {
     params.set(
       "moves",
       activeMoveGroups
-        .map((g) =>
-          g.moves
-            .filter((m) => m.name.trim())
-            .map((m) => m.name.trim() + "." + (m.stab ? "1" : "0"))
-            .join(","),
-        )
+        .map(function (g) {
+          return g.moves
+            .filter(function (m) {
+              return m.name.trim();
+            })
+            .map(function (m) {
+              return m.name.trim() + "." + (m.stab ? "1" : "0");
+            })
+            .join(",");
+        })
         .join("|"),
     );
   }
 
-  const activeAbilities = abilityFilter.filter((a) => a.trim());
+  const activeAbilities = abilityFilter.filter(function (a) {
+    return a.trim();
+  });
   if (activeAbilities.length > 0) {
     params.set("ability", activeAbilities.join(","));
   }
 
-  const activeTypeFilters = typeFilters.filter((f) => f.types.length > 0);
+  const activeTypeFilters = typeFilters.filter(function (f) {
+    return f.types.length > 0;
+  });
   if (activeTypeFilters.length > 0) {
     params.set(
       "etype",
-      activeTypeFilters
-        .map((f) => f.mode + ":" + f.types.join(","))
-        .join("|"),
+      serializeModeRows(activeTypeFilters, function (f) {
+        return f.types;
+      }),
     );
   }
 
@@ -379,7 +419,9 @@ function pushFiltersToURL() {
     params.set(
       "stats",
       statFilters
-        .map((f) => f.stat + "." + OP_TO_PARAM[f.op] + "." + f.val)
+        .map(function (f) {
+          return f.stat + "." + OP_TO_PARAM[f.op] + "." + f.val;
+        })
         .join("|"),
     );
   }
@@ -395,8 +437,7 @@ function pushFiltersToURL() {
     params.set("reg", filterName);
   }
 
-  const qs = params.toString();
-  history.replaceState(null, "", qs ? "?" + qs : window.location.pathname);
+  setURLParams(params);
 }
 
 function loadFiltersFromURL() {
@@ -409,10 +450,7 @@ function loadFiltersFromURL() {
   // Name filters
   const nameParam = params.get("name");
   if (nameParam) {
-    nameFilters = nameParam.split("|").map((row) => {
-      const [mode, ...rest] = row.split(":");
-      return { mode, texts: rest.join(":").split(",") };
-    });
+    nameFilters = parseModeRows(nameParam, "texts");
   } else {
     nameFilters = [];
   }
@@ -420,10 +458,7 @@ function loadFiltersFromURL() {
   // Pokemon type filters
   const ptypeParam = params.get("ptype");
   if (ptypeParam) {
-    pokemonTypeFilters = ptypeParam.split("|").map((row) => {
-      const [mode, ...rest] = row.split(":");
-      return { mode, types: rest.join(":").split(",") };
-    });
+    pokemonTypeFilters = parseModeRows(ptypeParam, "types");
   } else {
     pokemonTypeFilters = [];
   }
@@ -431,30 +466,33 @@ function loadFiltersFromURL() {
   // Move groups
   const movesParam = params.get("moves");
   if (movesParam) {
-    moveGroups = movesParam.split("|").map((group) => ({
-      moves: group.split(",").map((entry) => {
-        const lastDot = entry.lastIndexOf(".");
-        return {
-          name: entry.substring(0, lastDot),
-          stab: entry.substring(lastDot + 1) === "1",
-        };
-      }),
-    }));
+    moveGroups = movesParam.split("|").map(function (group) {
+      return {
+        moves: group.split(",").map(function (entry) {
+          const lastDot = entry.lastIndexOf(".");
+          return {
+            name: entry.substring(0, lastDot),
+            stab: entry.substring(lastDot + 1) === "1",
+          };
+        }),
+      };
+    });
   } else {
     moveGroups = [];
   }
 
   // Ability filter
   const abilityParam = params.get("ability");
-  abilityFilter = abilityParam ? abilityParam.split(",") : [];
+  if (abilityParam) {
+    abilityFilter = abilityParam.split(",");
+  } else {
+    abilityFilter = [];
+  }
 
   // Type effectiveness filters
   const etypeParam = params.get("etype");
   if (etypeParam) {
-    typeFilters = etypeParam.split("|").map((row) => {
-      const [mode, ...rest] = row.split(":");
-      return { mode, types: rest.join(":").split(",") };
-    });
+    typeFilters = parseModeRows(etypeParam, "types");
   } else {
     typeFilters = [];
   }
@@ -462,7 +500,7 @@ function loadFiltersFromURL() {
   // Stat filters
   const statsParam = params.get("stats");
   if (statsParam) {
-    statFilters = statsParam.split("|").map((entry) => {
+    statFilters = statsParam.split("|").map(function (entry) {
       const parts = entry.split(".");
       return {
         stat: parts[0],
@@ -485,7 +523,7 @@ function loadFiltersFromURL() {
     document.getElementById("sort-dir").value = "asc";
   }
 
-  // Regulation filter
+  // Regulation filter (may be set again after filtersReady resolves)
   const regParam = params.get("reg");
   document.getElementById("filter").value = regParam || "";
 
@@ -498,19 +536,9 @@ function loadFiltersFromURL() {
   renderAbilities();
 }
 
-function shareQuery() {
+function shareQuery(button) {
   pushFiltersToURL();
-  const url = window.location.href;
-  if (navigator.share) {
-    navigator.share({ title: "DEXGREP Search", url }).catch(() => {});
-  } else {
-    navigator.clipboard.writeText(url).then(() => {
-      const btn = document.querySelector('button[onclick="shareQuery()"]');
-      const orig = btn.textContent;
-      btn.textContent = "copied!";
-      setTimeout(() => { btn.textContent = orig; }, 1500);
-    });
-  }
+  shareCurrentURL(button);
 }
 
 // Query
@@ -818,7 +846,7 @@ function reset() {
   document.getElementById("result-count").textContent = "";
   document.getElementById("results-body").innerHTML =
     `<tr><td colspan="${RESULT_COLS}">run a query to see result(s)</td></tr>`;
-  history.replaceState(null, "", window.location.pathname);
+  clearURLParams();
 }
 
 function loadExample() {
