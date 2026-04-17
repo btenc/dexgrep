@@ -19,6 +19,6 @@ async function loadFilters() {
   );
 }
 
-loadFilters().catch((e) => {
+const filtersReady = loadFilters().catch((e) => {
   console.error("failed to load filters:", e);
 });

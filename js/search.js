@@ -498,6 +498,21 @@ function loadFiltersFromURL() {
   renderAbilities();
 }
 
+function shareQuery() {
+  pushFiltersToURL();
+  const url = window.location.href;
+  if (navigator.share) {
+    navigator.share({ title: "DEXGREP Search", url }).catch(() => {});
+  } else {
+    navigator.clipboard.writeText(url).then(() => {
+      const btn = document.querySelector('button[onclick="shareQuery()"]');
+      const orig = btn.textContent;
+      btn.textContent = "copied!";
+      setTimeout(() => { btn.textContent = orig; }, 1500);
+    });
+  }
+}
+
 // Query
 
 async function runQuery() {
@@ -838,9 +853,17 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
+// Render filter UI immediately (regulation dropdown may not be ready yet)
 loadFiltersFromURL();
-loadData()
+
+// Once both filters index and pokemon data are loaded, restore regulation and auto-run
+Promise.all([filtersReady, loadData()])
   .then(() => {
+    const params = new URLSearchParams(window.location.search);
+    const reg = params.get("reg");
+    if (reg) {
+      document.getElementById("filter").value = reg;
+    }
     if (window.location.search) {
       runQuery();
     }
