@@ -309,6 +309,195 @@ function renderStats() {
     .join("");
 }
 
+// URL param serialization
+
+const OP_TO_PARAM = { ">": "gt", ">=": "gte", "<": "lt", "<=": "lte", "=": "eq" };
+const PARAM_TO_OP = Object.fromEntries(
+  Object.entries(OP_TO_PARAM).map(([k, v]) => [v, k]),
+);
+
+function pushFiltersToURL() {
+  const params = new URLSearchParams();
+
+  const activeNameFilters = nameFilters.filter(
+    (f) => f.texts.some((t) => t.trim()),
+  );
+  if (activeNameFilters.length > 0) {
+    params.set(
+      "name",
+      activeNameFilters
+        .map((f) => f.mode + ":" + f.texts.filter((t) => t.trim()).join(","))
+        .join("|"),
+    );
+  }
+
+  const activePTypeFilters = pokemonTypeFilters.filter(
+    (f) => f.types.length > 0,
+  );
+  if (activePTypeFilters.length > 0) {
+    params.set(
+      "ptype",
+      activePTypeFilters
+        .map((f) => f.mode + ":" + f.types.join(","))
+        .join("|"),
+    );
+  }
+
+  const activeMoveGroups = moveGroups.filter(
+    (g) => g.moves.some((m) => m.name.trim()),
+  );
+  if (activeMoveGroups.length > 0) {
+    params.set(
+      "moves",
+      activeMoveGroups
+        .map((g) =>
+          g.moves
+            .filter((m) => m.name.trim())
+            .map((m) => m.name.trim() + "." + (m.stab ? "1" : "0"))
+            .join(","),
+        )
+        .join("|"),
+    );
+  }
+
+  const activeAbilities = abilityFilter.filter((a) => a.trim());
+  if (activeAbilities.length > 0) {
+    params.set("ability", activeAbilities.join(","));
+  }
+
+  const activeTypeFilters = typeFilters.filter((f) => f.types.length > 0);
+  if (activeTypeFilters.length > 0) {
+    params.set(
+      "etype",
+      activeTypeFilters
+        .map((f) => f.mode + ":" + f.types.join(","))
+        .join("|"),
+    );
+  }
+
+  if (statFilters.length > 0) {
+    params.set(
+      "stats",
+      statFilters
+        .map((f) => f.stat + "." + OP_TO_PARAM[f.op] + "." + f.val)
+        .join("|"),
+    );
+  }
+
+  const sortStat = document.getElementById("sort-stat").value;
+  const sortDir = document.getElementById("sort-dir").value;
+  if (sortStat !== "id" || sortDir !== "asc") {
+    params.set("sort", sortStat + "." + sortDir);
+  }
+
+  const filterName = document.getElementById("filter").value;
+  if (filterName) {
+    params.set("reg", filterName);
+  }
+
+  const qs = params.toString();
+  history.replaceState(null, "", qs ? "?" + qs : window.location.pathname);
+}
+
+function loadFiltersFromURL() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.toString() === "") {
+    reset();
+    return;
+  }
+
+  // Name filters
+  const nameParam = params.get("name");
+  if (nameParam) {
+    nameFilters = nameParam.split("|").map((row) => {
+      const [mode, ...rest] = row.split(":");
+      return { mode, texts: rest.join(":").split(",") };
+    });
+  } else {
+    nameFilters = [];
+  }
+
+  // Pokemon type filters
+  const ptypeParam = params.get("ptype");
+  if (ptypeParam) {
+    pokemonTypeFilters = ptypeParam.split("|").map((row) => {
+      const [mode, ...rest] = row.split(":");
+      return { mode, types: rest.join(":").split(",") };
+    });
+  } else {
+    pokemonTypeFilters = [];
+  }
+
+  // Move groups
+  const movesParam = params.get("moves");
+  if (movesParam) {
+    moveGroups = movesParam.split("|").map((group) => ({
+      moves: group.split(",").map((entry) => {
+        const lastDot = entry.lastIndexOf(".");
+        return {
+          name: entry.substring(0, lastDot),
+          stab: entry.substring(lastDot + 1) === "1",
+        };
+      }),
+    }));
+  } else {
+    moveGroups = [];
+  }
+
+  // Ability filter
+  const abilityParam = params.get("ability");
+  abilityFilter = abilityParam ? abilityParam.split(",") : [];
+
+  // Type effectiveness filters
+  const etypeParam = params.get("etype");
+  if (etypeParam) {
+    typeFilters = etypeParam.split("|").map((row) => {
+      const [mode, ...rest] = row.split(":");
+      return { mode, types: rest.join(":").split(",") };
+    });
+  } else {
+    typeFilters = [];
+  }
+
+  // Stat filters
+  const statsParam = params.get("stats");
+  if (statsParam) {
+    statFilters = statsParam.split("|").map((entry) => {
+      const parts = entry.split(".");
+      return {
+        stat: parts[0],
+        op: PARAM_TO_OP[parts[1]] || ">",
+        val: parseInt(parts[2]) || 0,
+      };
+    });
+  } else {
+    statFilters = [];
+  }
+
+  // Sort
+  const sortParam = params.get("sort");
+  if (sortParam) {
+    const [stat, dir] = sortParam.split(".");
+    document.getElementById("sort-stat").value = stat;
+    document.getElementById("sort-dir").value = dir;
+  } else {
+    document.getElementById("sort-stat").value = "id";
+    document.getElementById("sort-dir").value = "asc";
+  }
+
+  // Regulation filter
+  const regParam = params.get("reg");
+  document.getElementById("filter").value = regParam || "";
+
+  // Render all filter UIs
+  renderNameFilters();
+  renderPokemonTypeRows();
+  renderMoveRows();
+  renderTypeRows();
+  renderStats();
+  renderAbilities();
+}
+
 // Query
 
 async function runQuery() {
@@ -491,6 +680,7 @@ async function runQuery() {
     return valB - valA;
   });
 
+  pushFiltersToURL();
   renderResults(results, sortStat, sortDir, normalizedAbilities);
 }
 
@@ -613,6 +803,7 @@ function reset() {
   document.getElementById("result-count").textContent = "";
   document.getElementById("results-body").innerHTML =
     `<tr><td colspan="${RESULT_COLS}">run a query to see result(s)</td></tr>`;
+  history.replaceState(null, "", window.location.pathname);
 }
 
 function loadExample() {
@@ -647,7 +838,13 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
-reset();
-loadData().catch((e) => {
-  setStatus("error: " + e.message);
-});
+loadFiltersFromURL();
+loadData()
+  .then(() => {
+    if (window.location.search) {
+      runQuery();
+    }
+  })
+  .catch((e) => {
+    setStatus("error: " + e.message);
+  });
