@@ -57,12 +57,12 @@ function calculateMatchups() {
         ability: abilitySlug,
         pokemon: effective,
         baseTypes: baseTypes,
+        baseAbilities: pokemon ? pokemon.abilities : null,
       };
     });
 
   if (resolved.length === 0) {
-    document.getElementById("matchups-grid").innerHTML =
-      "<p>enter at least one Pokémon</p>";
+    alert("enter at least one Pokémon");
     return;
   }
 
@@ -71,11 +71,18 @@ function calculateMatchups() {
   const enteredAbilities = resolved.map((s) => s.ability).filter(Boolean);
   const badAbilities = unknownAbilityNames(enteredAbilities);
 
+  const illegalAbilities = resolved
+    .filter((s) => s.baseAbilities && s.ability && !badAbilities.includes(s.ability) && !s.baseAbilities.includes(s.ability))
+    .map((s) => `${s.label} cannot have ${s.ability}`);
+
   if (badPokemon.length) {
     issues.push("unknown pokémon: " + badPokemon.join(", "));
   }
   if (badAbilities.length) {
     issues.push("unknown abilities: " + badAbilities.join(", "));
+  }
+  if (illegalAbilities.length) {
+    issues.push(illegalAbilities.join(", "));
   }
   if (filterName && !filterSets[filterName]) {
     issues.push("filter not yet loaded, please try again");
@@ -139,6 +146,18 @@ function renderMatchupsGrid(resolved) {
   const typeHeaders = ALL_TYPES.map(
     (t) => `<th class="t-${t}" title="${t}">${TYPE_SHORT[t]}</th>`,
   ).join("");
+
+  if (resolved.length === 0) {
+    document.getElementById("matchups-grid").innerHTML = `
+      <div class="team-grid">
+        <table>
+          <thead><tr><th>pokémon</th>${typeHeaders}</tr></thead>
+          <tbody><tr><td colspan="${ALL_TYPES.length + 1}">calculate to see results</td></tr></tbody>
+        </table>
+      </div>
+    `;
+    return;
+  }
 
   const rows = resolved
     .map((slot) => {
@@ -204,14 +223,15 @@ function loadExample() {
     { name: "incineroar", ability: "" },
   ];
   renderTeamInputs();
-  document.getElementById("matchups-grid").innerHTML = "";
+  document.getElementById("filter").value = "";
+  renderMatchupsGrid([]);
 }
 
 function resetMatchups() {
   team = Array.from({ length: 6 }, () => ({ name: "", ability: "" }));
   renderTeamInputs();
   document.getElementById("filter").value = "";
-  document.getElementById("matchups-grid").innerHTML = "";
+  renderMatchupsGrid([]);
 }
 
 // Init
@@ -223,6 +243,7 @@ document.addEventListener("keydown", (e) => {
 });
 
 renderTeamInputs();
-loadData().catch((e) => {
+renderMatchupsGrid([]);
+Promise.all([filtersReady, loadData()]).catch((e) => {
   setStatus("error: " + e.message);
 });
