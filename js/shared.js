@@ -160,15 +160,6 @@ function typeEffectiveness(attackType, pokemon) {
     }
   }
 
-  // Wonder Guard: only super-effective moves land
-  if (pokemon.abilities.includes("wonder-guard")) {
-    const base = chartEffectiveness(attackType, pokemon.types);
-    if (base >= 2) {
-      return base;
-    }
-    return 0;
-  }
-
   let mult = chartEffectiveness(attackType, pokemon.types);
   for (const ability of pokemon.abilities) {
     if ((ABILITY_TYPE_HALVINGS[ability] || []).includes(attackType)) {
@@ -181,6 +172,12 @@ function typeEffectiveness(attackType, pokemon) {
       mult *= ABILITY_TYPE_BOOSTS[ability][attackType];
     }
   }
+
+  // Wonder Guard: only super-effective moves land (checked after other modifiers)
+  if (pokemon.abilities.includes("wonder-guard") && mult < 2) {
+    return 0;
+  }
+
   return mult;
 }
 

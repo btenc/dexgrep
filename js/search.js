@@ -506,14 +506,6 @@ function loadFiltersFromURL() {
     document.getElementById("sort-dir").value = "asc";
   }
 
-  // Regulation/format filter
-  const regParam = params.get("reg");
-  if (regParam) {
-    document.getElementById("filter").value = regParam;
-  } else {
-    document.getElementById("filter").value = "";
-  }
-
   // Re-render all filter UI sections to reflect the loaded state
   renderNameFilters();
   renderPokemonTypeRows();
@@ -629,7 +621,7 @@ async function runQuery() {
         if (!pokemon.moves[move.name]) {
           return false;
         }
-        if (move.stab && move.type && !pokemon.types.includes(move.type)) {
+        if (move.stab && (!move.type || !pokemon.types.includes(move.type))) {
           return false;
         }
         return true;
