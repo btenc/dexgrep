@@ -484,12 +484,25 @@ function loadFiltersFromURL() {
     }
   }
 
+  const VALID_STATS = new Set([
+    "id",
+    "hp",
+    "atk",
+    "def",
+    "spatk",
+    "spdef",
+    "speed",
+    "bst",
+  ]);
   statFilters = [];
   for (const entry of params.getAll("stat")) {
     const parts = entry.split(".");
     const stat = parts[0];
     const opParam = parts[1];
     const valStr = parts[2];
+    if (!VALID_STATS.has(stat)) {
+      continue;
+    }
     const op = PARAM_TO_OP[opParam] || ">";
     const val = parseInt(valStr) || 0;
     statFilters.push({ stat: stat, op: op, val: val });
@@ -530,7 +543,12 @@ async function runQuery() {
     .flatMap((group) => group.moves)
     .map((move) => normalizeSlug(move.name))
     .filter(Boolean);
-  await Promise.all(allMoveNames.map(cacheMoveType));
+  try {
+    await Promise.all(allMoveNames.map(cacheMoveType));
+  } catch (e) {
+    alert("failed to fetch move type data: " + e.message);
+    return;
+  }
 
   const filterName = document.getElementById("filter").value;
   if (filterName) {
@@ -758,16 +776,16 @@ function renderResults(results, sortStat, sortDir, normalizedAbilities) {
             bold = affectsMatchup;
           }
           if (bold) {
-            return `<b>${ability}${star}</b>`;
+            return `<b>${escapeHTML(ability)}${star}</b>`;
           }
-          return `${ability}${star}`;
+          return `${escapeHTML(ability)}${star}`;
         })
         .join(", ");
 
       return `<tr>
         <td class="dex">${pokemon.id}</td>
-        <td>${pokemon.baseName}</td>
-        <td class="form-col">${pokemon.form}</td>
+        <td>${escapeHTML(pokemon.baseName)}</td>
+        <td class="form-col">${escapeHTML(pokemon.form)}</td>
         <td>${pokemon.types.map(typeBadge).join("")}</td>
         <td class="form-col">${abilities}</td>
         <td class="sv">${pokemon.stats.hp}</td>

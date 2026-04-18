@@ -53,7 +53,7 @@ function calculateMatchups() {
       }
 
       return {
-        label: slot.name.trim(),
+        label: normalizeSlug(slot.name),
         ability: abilitySlug,
         pokemon: effective,
         baseTypes: baseTypes,
@@ -72,7 +72,13 @@ function calculateMatchups() {
   const badAbilities = unknownAbilityNames(enteredAbilities);
 
   const illegalAbilities = resolved
-    .filter((s) => s.baseAbilities && s.ability && !badAbilities.includes(s.ability) && !s.baseAbilities.includes(s.ability))
+    .filter(
+      (s) =>
+        s.baseAbilities &&
+        s.ability &&
+        !badAbilities.includes(s.ability) &&
+        !s.baseAbilities.includes(s.ability),
+    )
     .map((s) => `${s.label} cannot have ${s.ability}`);
 
   if (badPokemon.length) {
@@ -163,7 +169,7 @@ function renderMatchupsGrid(resolved) {
     .map((slot) => {
       if (!slot.pokemon) {
         return `<tr>
-          <td class="form-col">${slot.label} <small>(?)</small></td>
+          <td class="form-col">${escapeHTML(slot.label)} <small>(?)</small></td>
           ${ALL_TYPES.map(() => `<td class="form-col">?</td>`).join("")}
         </tr>`;
       }
@@ -172,13 +178,13 @@ function renderMatchupsGrid(resolved) {
         .join("");
       let abilityLabel = "";
       if (slot.ability) {
-        abilityLabel = ` <small class="form-col">${slot.ability}</small>`;
+        abilityLabel = ` <small class="form-col">${escapeHTML(slot.ability)}</small>`;
       }
       const cells = ALL_TYPES.map((atk) => {
         const mult = typeEffectiveness(atk, slot.pokemon);
         return `<td class="${effClass(mult)}">${effLabel(mult)}</td>`;
       }).join("");
-      return `<tr><td>${slot.label} ${typeBadges}${abilityLabel}</td>${cells}</tr>`;
+      return `<tr><td>${escapeHTML(slot.label)} ${typeBadges}${abilityLabel}</td>${cells}</tr>`;
     })
     .join("");
 

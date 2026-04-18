@@ -47,7 +47,7 @@ Create simple or complex queries that return all Pokémon that match the constra
 "What are all the electric type Pokémon that are dual type with either ghost or flying, can use Discharge or Thunderbolt, Volt Switch, and either Shadow Ball with STAB or Tailwind, are immune to ground, and have a special attack equal to or over 90 sorted by special attack descending?"
 
 <details>
-<summary>screenshot</summary>
+<summary>Example screenshot</summary>
 
 ![Electric Example](assets/electric_example.png)
 
@@ -56,7 +56,7 @@ Create simple or complex queries that return all Pokémon that match the constra
 "What is the fastest alolan Pokémon?"
 
 <details>
-<summary>screenshot</summary>
+<summary>Example screenshot</summary>
 
 ![Alolan Example](assets/alolan_example.png)
 
@@ -72,9 +72,14 @@ Create simple or complex queries that return all Pokémon that match the constra
 
 ## Team Type Matchups
 
-Show an analysis of the entered team's weaknesses and resistances.
+Show an analysis / breakdown of the entered team's weaknesses and resistances.
 
-TODO
+<details>
+<summary>Example screenshot</summary>
+
+![Team Matchups Example](assets/team_matchups_example.png)
+
+</details>
 
 ## Data
 
@@ -94,7 +99,7 @@ Drop a JSON file (array of PokéAPI slugs) into `filters/` and add an entry to `
 
 ## TODO
 
-- Add link sharing in URL for current tools
+- Add link sharing for team matchups
 - Add more regulations, add Smogon regulations, add generation filters
 - Add CI linting and formatting.
 - More cool stuff!
