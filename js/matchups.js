@@ -6,11 +6,11 @@ function renderTeamInputs() {
       (slot, si) => `
       <div class="filter-row">
         <b>slot ${si + 1}</b>&nbsp;
-        <input type="text" value="${slot.name}" size="20" placeholder="pokemon name"
+        <input type="text" value="${escapeHTML(slot.name)}" size="20" placeholder="pokemon name"
           list="pokemon-datalist"
           onchange="team[${si}].name = this.value">
         &nbsp;ability:&nbsp;
-        <input type="text" value="${slot.ability}" size="18" placeholder="optional"
+        <input type="text" value="${escapeHTML(slot.ability)}" size="18" placeholder="optional"
           list="ability-datalist"
           onchange="team[${si}].ability = this.value">
       </div>

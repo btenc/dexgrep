@@ -345,6 +345,9 @@ const STAB_SUFFIX = ".stab";
 // Used by name, ptype, and etype filters which all share this format.
 function parseModeValues(str) {
   const colonIdx = str.indexOf(":");
+  if (colonIdx === -1) {
+    return null;
+  }
   const mode = str.slice(0, colonIdx);
   const values = str.slice(colonIdx + 1).split(",");
   return { mode: mode, values: values };
@@ -435,13 +438,17 @@ function loadFiltersFromURL() {
   nameFilters = [];
   for (const row of params.getAll("name")) {
     const parsed = parseModeValues(row);
-    nameFilters.push({ mode: parsed.mode, texts: parsed.values });
+    if (parsed) {
+      nameFilters.push({ mode: parsed.mode, texts: parsed.values });
+    }
   }
 
   pokemonTypeFilters = [];
   for (const row of params.getAll("ptype")) {
     const parsed = parseModeValues(row);
-    pokemonTypeFilters.push({ mode: parsed.mode, types: parsed.values });
+    if (parsed) {
+      pokemonTypeFilters.push({ mode: parsed.mode, types: parsed.values });
+    }
   }
 
   // Move groups
@@ -472,7 +479,9 @@ function loadFiltersFromURL() {
   typeFilters = [];
   for (const row of params.getAll("etype")) {
     const parsed = parseModeValues(row);
-    typeFilters.push({ mode: parsed.mode, types: parsed.values });
+    if (parsed) {
+      typeFilters.push({ mode: parsed.mode, types: parsed.values });
+    }
   }
 
   statFilters = [];
@@ -481,14 +490,8 @@ function loadFiltersFromURL() {
     const stat = parts[0];
     const opParam = parts[1];
     const valStr = parts[2];
-    let op = PARAM_TO_OP[opParam];
-    if (!op) {
-      op = ">";
-    }
-    let val = parseInt(valStr);
-    if (!val) {
-      val = 0;
-    }
+    const op = PARAM_TO_OP[opParam] || ">";
+    const val = parseInt(valStr) || 0;
     statFilters.push({ stat: stat, op: op, val: val });
   }
 
@@ -513,10 +516,6 @@ function loadFiltersFromURL() {
   renderTypeRows();
   renderStats();
   renderAbilities();
-}
-
-function shareQuery(button) {
-  shareCurrentURL(button);
 }
 
 // Query
