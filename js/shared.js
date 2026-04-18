@@ -102,6 +102,46 @@ function normalizeSlug(str) {
   return str.trim().toLowerCase().replace(/\s+/g, "-");
 }
 
+function escapeHTML(str) {
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+// URL helpers
+
+function setURLParams(params) {
+  const qs = params.toString().replace(/%2C/gi, ",").replace(/%3A/gi, ":");
+  if (qs) {
+    history.replaceState(null, "", "?" + qs);
+  } else {
+    history.replaceState(null, "", window.location.pathname);
+  }
+}
+
+function clearURLParams() {
+  history.replaceState(null, "", window.location.pathname);
+}
+
+// Share the current page URL via the native share sheet, or copy to clipboard as fallback.
+// `button` is the triggering element (used for "copied!" feedback on clipboard fallback).
+function shareCurrentURL(button) {
+  const url = window.location.href;
+  if (navigator.share) {
+    navigator.share({ title: document.title, url }).catch(function () {});
+  } else {
+    navigator.clipboard.writeText(url).then(function () {
+      const orig = button.textContent;
+      button.textContent = "copied!";
+      setTimeout(function () {
+        button.textContent = orig;
+      }, 1500);
+    });
+  }
+}
+
 // Type Effectiveness
 
 function chartEffectiveness(attackType, types) {

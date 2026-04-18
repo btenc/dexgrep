@@ -60,7 +60,7 @@ function removeTextFromNameFilter(gi, ti) {
 function renderNameFilterText(text, gi, ti) {
   return `
     ${ti > 0 ? "<small>or</small>" : ""}
-    <input type="text" value="${text}" size="18" placeholder="e.g. mega"
+    <input type="text" value="${escapeHTML(text)}" size="18" placeholder="e.g. mega"
       onchange="nameFilters[${gi}].texts[${ti}] = this.value">
     <button onclick="removeTextFromNameFilter(${gi},${ti})">x</button>
   `;
@@ -156,7 +156,7 @@ function renderAbilities() {
     .map(
       (name, i) => `
       ${i > 0 ? "<small>or</small>" : ""}
-      <input type="text" value="${name}" size="18" placeholder="ability name"
+      <input type="text" value="${escapeHTML(name)}" size="18" placeholder="ability name"
         list="ability-datalist" onchange="abilityFilter[${i}] = this.value">
       <button onclick="abilityFilter.splice(${i},1);renderAbilities()">x</button>
     `,
@@ -187,7 +187,7 @@ function removeMoveFromGroup(gi, mi) {
 function renderMoveEntry(move, gi, mi) {
   return `
     ${mi > 0 ? "<small>or</small>" : ""}
-    <input type="text" value="${move.name}" size="18" placeholder="move name"
+    <input type="text" value="${escapeHTML(move.name)}" size="18" placeholder="move name"
       list="move-datalist" onchange="moveGroups[${gi}].moves[${mi}].name = this.value">
     <label>
       <input type="checkbox" ${move.stab ? "checked" : ""}
@@ -307,6 +307,224 @@ function renderStats() {
   document.getElementById("stat-rows").innerHTML = statFilters
     .map(renderStatFilterRow)
     .join("");
+}
+
+// URL sharing
+//
+// The URL encodes the full query so it can be bookmarked or shared.
+//
+// Format rules:
+//   Commas   ( , ) = OR multiple values within one filter row
+//   Repeated key  = AND multiple rows of the same filter
+//
+// Full example:
+//   ?name=includes:mega,mega-x    name includes "mega" OR "mega-x"
+//   &name=excludes:gmax           AND name excludes "gmax"
+//   &ptype=is:fire,dragon         AND pokemon type is fire OR dragon
+//   &moves=thunderbolt.stab,discharge.stab  AND knows thunderbolt OR discharge (with STAB)
+//   &moves=will-o-wisp            AND knows will-o-wisp (no STAB required)
+//   &ability=levitate,flash-fire  AND ability is levitate OR flash-fire
+//   &etype=resists:fire,water     AND resists fire AND water
+//   &etype=weak:electric          AND weak to electric
+//   &stat=speed.gt.80             AND speed > 80
+//   &stat=hp.gte.100              AND hp >= 100
+//   &sort=spatk.desc
+//   &reg=reg-ma
+
+const OP_TO_PARAM = {
+  ">": "gt",
+  ">=": "gte",
+  "<": "lt",
+  "<=": "lte",
+  "=": "eq",
+};
+const PARAM_TO_OP = { gt: ">", gte: ">=", lt: "<", lte: "<=", eq: "=" };
+const STAB_SUFFIX = ".stab";
+
+// Splits a "mode:val1,val2" string into its mode and values array.
+// Used by name, ptype, and etype filters which all share this format.
+function parseModeValues(str) {
+  const colonIdx = str.indexOf(":");
+  const mode = str.slice(0, colonIdx);
+  const values = str.slice(colonIdx + 1).split(",");
+  return { mode: mode, values: values };
+}
+
+// Saves all active filters into the URL query string.
+function pushFiltersToURL() {
+  const params = new URLSearchParams();
+
+  // Name filters
+  for (const f of nameFilters) {
+    const texts = f.texts.filter(function (t) {
+      return t.trim() !== "";
+    });
+    if (texts.length > 0) {
+      params.append("name", f.mode + ":" + texts.join(","));
+    }
+  }
+
+  // Pokemon type filters
+  for (const f of pokemonTypeFilters) {
+    if (f.types.length > 0) {
+      params.append("ptype", f.mode + ":" + f.types.join(","));
+    }
+  }
+
+  // Move groups
+  for (const g of moveGroups) {
+    const entries = [];
+    for (const m of g.moves) {
+      if (m.name.trim() !== "") {
+        let entry = m.name.trim();
+        if (m.stab) {
+          entry = entry + STAB_SUFFIX;
+        }
+        entries.push(entry);
+      }
+    }
+    if (entries.length > 0) {
+      params.append("moves", entries.join(","));
+    }
+  }
+
+  // Ability filter
+  const activeAbilities = abilityFilter.filter(function (a) {
+    return a.trim() !== "";
+  });
+  if (activeAbilities.length > 0) {
+    params.set("ability", activeAbilities.join(","));
+  }
+
+  // Type effectiveness filters
+  for (const f of typeFilters) {
+    if (f.types.length > 0) {
+      params.append("etype", f.mode + ":" + f.types.join(","));
+    }
+  }
+
+  // Stat filters
+  for (const f of statFilters) {
+    params.append("stat", f.stat + "." + OP_TO_PARAM[f.op] + "." + f.val);
+  }
+
+  // Sort: only saved when not the default (id, asc)
+  const sortStat = document.getElementById("sort-stat").value;
+  const sortDir = document.getElementById("sort-dir").value;
+  if (sortStat !== "id" || sortDir !== "asc") {
+    params.set("sort", sortStat + "." + sortDir);
+  }
+
+  // Regulation/format filter
+  const filterName = document.getElementById("filter").value;
+  if (filterName) {
+    params.set("reg", filterName);
+  }
+
+  setURLParams(params);
+}
+
+function loadFiltersFromURL() {
+  const params = new URLSearchParams(window.location.search);
+
+  if (params.toString() === "") {
+    reset();
+    return;
+  }
+
+  nameFilters = [];
+  for (const row of params.getAll("name")) {
+    const parsed = parseModeValues(row);
+    nameFilters.push({ mode: parsed.mode, texts: parsed.values });
+  }
+
+  pokemonTypeFilters = [];
+  for (const row of params.getAll("ptype")) {
+    const parsed = parseModeValues(row);
+    pokemonTypeFilters.push({ mode: parsed.mode, types: parsed.values });
+  }
+
+  // Move groups
+  moveGroups = [];
+  for (const group of params.getAll("moves")) {
+    const moves = [];
+    for (const entry of group.split(",")) {
+      let moveName = entry;
+      let stabRequired = false;
+      if (entry.endsWith(STAB_SUFFIX)) {
+        moveName = entry.slice(0, -STAB_SUFFIX.length);
+        stabRequired = true;
+      }
+      moves.push({ name: moveName, stab: stabRequired });
+    }
+    moveGroups.push({ moves: moves });
+  }
+
+  // Ability filter
+  const abilityParam = params.get("ability");
+  if (abilityParam) {
+    abilityFilter = abilityParam.split(",");
+  } else {
+    abilityFilter = [];
+  }
+
+  // Type effectiveness filters
+  typeFilters = [];
+  for (const row of params.getAll("etype")) {
+    const parsed = parseModeValues(row);
+    typeFilters.push({ mode: parsed.mode, types: parsed.values });
+  }
+
+  statFilters = [];
+  for (const entry of params.getAll("stat")) {
+    const parts = entry.split(".");
+    const stat = parts[0];
+    const opParam = parts[1];
+    const valStr = parts[2];
+    let op = PARAM_TO_OP[opParam];
+    if (!op) {
+      op = ">";
+    }
+    let val = parseInt(valStr);
+    if (!val) {
+      val = 0;
+    }
+    statFilters.push({ stat: stat, op: op, val: val });
+  }
+
+  // Sort
+  const sortParam = params.get("sort");
+  let lastDot = -1;
+  if (sortParam) {
+    lastDot = sortParam.lastIndexOf(".");
+  }
+  if (sortParam && lastDot !== -1) {
+    document.getElementById("sort-stat").value = sortParam.slice(0, lastDot);
+    document.getElementById("sort-dir").value = sortParam.slice(lastDot + 1);
+  } else {
+    document.getElementById("sort-stat").value = "id";
+    document.getElementById("sort-dir").value = "asc";
+  }
+
+  // Regulation/format filter
+  const regParam = params.get("reg");
+  if (regParam) {
+    document.getElementById("filter").value = regParam;
+  } else {
+    document.getElementById("filter").value = "";
+  }
+
+  // Re-render all filter UI sections to reflect the loaded state
+  renderNameFilters();
+  renderPokemonTypeRows();
+  renderMoveRows();
+  renderTypeRows();
+  renderStats();
+  renderAbilities();
+}
+
+function shareQuery(button) {
+  shareCurrentURL(button);
 }
 
 // Query
@@ -491,6 +709,7 @@ async function runQuery() {
     return valB - valA;
   });
 
+  pushFiltersToURL();
   renderResults(results, sortStat, sortDir, normalizedAbilities);
 }
 
@@ -613,6 +832,7 @@ function reset() {
   document.getElementById("result-count").textContent = "";
   document.getElementById("results-body").innerHTML =
     `<tr><td colspan="${RESULT_COLS}">run a query to see result(s)</td></tr>`;
+  clearURLParams();
 }
 
 function loadExample() {
@@ -647,7 +867,21 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
-reset();
-loadData().catch((e) => {
-  setStatus("error: " + e.message);
-});
+// Render filter UI immediately (regulation dropdown may not be ready yet)
+loadFiltersFromURL();
+
+// Once both filters index and pokemon data are loaded, restore regulation and auto-run
+Promise.all([filtersReady, loadData()])
+  .then(() => {
+    const params = new URLSearchParams(window.location.search);
+    const reg = params.get("reg");
+    if (reg) {
+      document.getElementById("filter").value = reg;
+    }
+    if (window.location.search) {
+      runQuery();
+    }
+  })
+  .catch((e) => {
+    setStatus("error: " + e.message);
+  });
