@@ -102,6 +102,14 @@ function normalizeSlug(str) {
   return str.trim().toLowerCase().replace(/\s+/g, "-");
 }
 
+function escapeHTML(str) {
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
 // URL helpers
 
 function setURLParams(params) {

@@ -60,7 +60,7 @@ function removeTextFromNameFilter(gi, ti) {
 function renderNameFilterText(text, gi, ti) {
   return `
     ${ti > 0 ? "<small>or</small>" : ""}
-    <input type="text" value="${text}" size="18" placeholder="e.g. mega"
+    <input type="text" value="${escapeHTML(text)}" size="18" placeholder="e.g. mega"
       onchange="nameFilters[${gi}].texts[${ti}] = this.value">
     <button onclick="removeTextFromNameFilter(${gi},${ti})">x</button>
   `;
@@ -156,7 +156,7 @@ function renderAbilities() {
     .map(
       (name, i) => `
       ${i > 0 ? "<small>or</small>" : ""}
-      <input type="text" value="${name}" size="18" placeholder="ability name"
+      <input type="text" value="${escapeHTML(name)}" size="18" placeholder="ability name"
         list="ability-datalist" onchange="abilityFilter[${i}] = this.value">
       <button onclick="abilityFilter.splice(${i},1);renderAbilities()">x</button>
     `,
@@ -187,7 +187,7 @@ function removeMoveFromGroup(gi, mi) {
 function renderMoveEntry(move, gi, mi) {
   return `
     ${mi > 0 ? "<small>or</small>" : ""}
-    <input type="text" value="${move.name}" size="18" placeholder="move name"
+    <input type="text" value="${escapeHTML(move.name)}" size="18" placeholder="move name"
       list="move-datalist" onchange="moveGroups[${gi}].moves[${mi}].name = this.value">
     <label>
       <input type="checkbox" ${move.stab ? "checked" : ""}
