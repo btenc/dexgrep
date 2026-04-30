@@ -1,21 +1,5 @@
 const RESULT_COLS = 17;
 
-// Search-specific utilities
-
-function bst(pokemon) {
-  return Object.values(pokemon.stats).reduce((sum, n) => sum + n, 0);
-}
-
-function statValue(pokemon, key) {
-  if (key === "id") {
-    return pokemon.id;
-  }
-  if (key === "bst") {
-    return bst(pokemon);
-  }
-  return pokemon.stats[key] || 0;
-}
-
 // When an ability filter is active, type matchups use only the matched ability.
 // This returns the pokemon object to use for matchup calculations.
 function filterAbilitiesForMatchup(pokemon, normalizedAbilities) {
@@ -723,10 +707,6 @@ async function runQuery() {
 }
 
 // Render results
-
-function typeBadge(type) {
-  return `<span class="tb t-${type}">${type}</span>`;
-}
 
 function compactType(type, pokemon) {
   let star = "";

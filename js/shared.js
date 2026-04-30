@@ -207,6 +207,42 @@ function typeMatchups(pokemon) {
   return groups;
 }
 
+// Display utilities
+
+function typeBadge(type) {
+  return `<span class="tb t-${type}">${type}</span>`;
+}
+
+function effClass(mult) {
+  if (mult === 0) return "eff-0";
+  if (mult <= 0.25) return "eff-025";
+  if (mult <= 0.5) return "eff-05";
+  if (mult >= 4) return "eff-4";
+  if (mult >= 2) return "eff-2";
+  return "";
+}
+
+function effLabel(mult) {
+  if (mult === 0) return "0";
+  if (mult <= 0.25) return "¼";
+  if (mult <= 0.5) return "½";
+  if (mult >= 4) return "4";
+  if (mult >= 2) return "2";
+  return "";
+}
+
+// Pokemon data utilities
+
+function bst(pokemon) {
+  return Object.values(pokemon.stats).reduce((sum, n) => sum + n, 0);
+}
+
+function statValue(pokemon, key) {
+  if (key === "id") return pokemon.id;
+  if (key === "bst") return bst(pokemon);
+  return pokemon.stats[key] || 0;
+}
+
 // PokeAPI
 
 const POKEAPI = "https://pokeapi.co/api/v2";
@@ -532,7 +568,7 @@ function injectLayout() {
   const footerEl = document.getElementById("site-footer");
   if (footerEl) {
     footerEl.innerHTML = `
-      <small>Data from <a href="https://pokeapi.co">PokéAPI</a> (thank you!) - this site last updated: 2026-04-18 - <a href="https://github.com/btenc/dexgrep">README and source</a></small>
+      <small>Data from <a href="https://pokeapi.co">PokéAPI</a> (thank you!) - this site last updated: 2026-04-30 - <a href="https://github.com/btenc/dexgrep">README and source</a></small>
       <p class="validators">
         <a href="https://validator.w3.org/check?uri=referer"><img src="https://www.w3.org/Icons/valid-html401" alt="Valid HTML!"></a>
         <a href="https://jigsaw.w3.org/css-validator/check/referer"><img src="https://jigsaw.w3.org/css-validator/images/vcss" alt="Valid CSS!"></a>

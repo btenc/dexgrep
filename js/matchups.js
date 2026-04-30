@@ -110,44 +110,6 @@ function calculateMatchups() {
   renderMatchupsGrid(resolved);
 }
 
-function effClass(mult) {
-  if (mult === 0) {
-    return "eff-0";
-  }
-  if (mult <= 0.25) {
-    return "eff-025";
-  }
-  if (mult <= 0.5) {
-    return "eff-05";
-  }
-  if (mult >= 4) {
-    return "eff-4";
-  }
-  if (mult >= 2) {
-    return "eff-2";
-  }
-  return "";
-}
-
-function effLabel(mult) {
-  if (mult === 0) {
-    return "0";
-  }
-  if (mult <= 0.25) {
-    return "¼";
-  }
-  if (mult <= 0.5) {
-    return "½";
-  }
-  if (mult >= 4) {
-    return "4";
-  }
-  if (mult >= 2) {
-    return "2";
-  }
-  return "";
-}
-
 function renderMatchupsGrid(resolved) {
   const typeHeaders = ALL_TYPES.map(
     (t) => `<th class="t-${t}" title="${t}">${TYPE_SHORT[t]}</th>`,
@@ -173,9 +135,7 @@ function renderMatchupsGrid(resolved) {
           ${ALL_TYPES.map(() => `<td class="form-col">?</td>`).join("")}
         </tr>`;
       }
-      const typeBadges = slot.baseTypes
-        .map((t) => `<span class="tb t-${t}">${t}</span>`)
-        .join("");
+      const typeBadges = slot.baseTypes.map(typeBadge).join("");
       let abilityLabel = "";
       if (slot.ability) {
         abilityLabel = ` <small class="form-col">${escapeHTML(slot.ability)}</small>`;
