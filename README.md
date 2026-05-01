@@ -83,7 +83,7 @@ Show an analysis / breakdown of the entered team's weaknesses and resistances.
 
 ## Data
 
-Fetched from [PokéAPI](https://pokeapi.co) and cached to your browser's localStorage. Hit "refresh data" to re-fetch from the API (pls do not spam, we are caching for a reason as they offer their API for free!).
+Fetched from [PokéAPI](https://pokeapi.co) and cached to your browser's localStorage. Hit "refresh data" to re-fetch from the API (this is limited to once per day).
 
 ## Development
 
