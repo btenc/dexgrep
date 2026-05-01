@@ -75,7 +75,9 @@ const filterSets = {};
 
 // Utilities
 
-function lsGet(key) {
+// localStorage helpers that transparently handle JSON serialization.
+// Returns null on missing key or parse error; silently drops writes if storage is unavailable.
+function storageGet(key) {
   try {
     return JSON.parse(localStorage.getItem(key));
   } catch {
@@ -83,7 +85,7 @@ function lsGet(key) {
   }
 }
 
-function lsSet(key, value) {
+function storageSet(key, value) {
   try {
     localStorage.setItem(key, JSON.stringify(value));
   } catch {}
@@ -246,6 +248,7 @@ function statValue(pokemon, key) {
 // PokeAPI
 
 const POKEAPI = "https://pokeapi.co/api/v2";
+// Increment this to bust all locally cached Pokémon data (e.g. after a schema change).
 const CACHE_KEY = "dg2";
 
 // prettier-ignore
@@ -254,7 +257,7 @@ const POKEAPI_STAT_KEYS = {
   "special-attack": "spatk", "special-defense": "spdef", speed: "speed",
 };
 
-const cachedMoveTypes = lsGet(CACHE_KEY + "_mt") || {};
+const cachedMoveTypes = storageGet(CACHE_KEY + "_mt") || {};
 let pokemonDatabase = {};
 let isReady = false;
 
@@ -277,7 +280,7 @@ async function cacheMoveType(name) {
   }
   const data = await fetchJSON(`${POKEAPI}/move/${name}`);
   cachedMoveTypes[name] = data.type.name;
-  lsSet(CACHE_KEY + "_mt", cachedMoveTypes);
+  storageSet(CACHE_KEY + "_mt", cachedMoveTypes);
 }
 
 function parsePokemon(data) {
@@ -336,7 +339,7 @@ function onReady() {
   isReady = true;
   buildDataLists();
   setProgress(100);
-  const date = lsGet(CACHE_KEY + "_date");
+  const date = storageGet(CACHE_KEY + "_date");
   let statusText = `ready - ${Object.keys(pokemonDatabase).length} pokemon`;
   if (date) {
     statusText += ` - cached locally on ${date}`;
@@ -358,7 +361,7 @@ async function loadData() {
     localStorage.setItem("cache_key", CACHE_KEY);
   }
 
-  const cached = lsGet(CACHE_KEY + "_db");
+  const cached = storageGet(CACHE_KEY + "_db");
   if (cached) {
     pokemonDatabase = cached;
     onReady();
@@ -372,7 +375,7 @@ async function loadData() {
     id: parseInt(p.url.split("/").slice(-2, -1)[0]),
   }));
   const now = new Date();
-  lsSet(
+  storageSet(
     CACHE_KEY + "_date",
     now.toISOString().split("T")[0] + " " + now.toTimeString().slice(0, 5),
   );
@@ -393,7 +396,7 @@ async function loadData() {
     setStatus(`fetching ${done}/${fetchList.length}...`);
   }
 
-  lsSet(CACHE_KEY + "_db", pokemonDatabase);
+  storageSet(CACHE_KEY + "_db", pokemonDatabase);
   onReady();
 }
 
@@ -488,7 +491,7 @@ function findPokemonByName(nameInput) {
 
 function refreshData() {
   const today = new Date().toISOString().split("T")[0];
-  const refreshLog = lsGet("refresh_log") || {};
+  const refreshLog = storageGet("refresh_log") || {};
   const usedToday = refreshLog[today] || 0;
   if (usedToday >= 1) {
     alert("Refresh limit reached (1 per day). Try again tomorrow.");
@@ -497,7 +500,7 @@ function refreshData() {
   if (!confirm("Clear cached Pokemon data and re-fetch from PokeAPI?")) {
     return;
   }
-  lsSet("refresh_log", { ...refreshLog, [today]: usedToday + 1 });
+  storageSet("refresh_log", { ...refreshLog, [today]: usedToday + 1 });
   for (const key of Object.keys(localStorage)) {
     if (key.startsWith(CACHE_KEY)) {
       localStorage.removeItem(key);
@@ -568,7 +571,7 @@ function injectLayout() {
   const footerEl = document.getElementById("site-footer");
   if (footerEl) {
     footerEl.innerHTML = `
-      <small>Data from <a href="https://pokeapi.co">PokéAPI</a> (thank you!) - this site last updated: 2026-04-30 - <a href="https://github.com/btenc/dexgrep">README and source</a></small>
+      <small>Data from <a href="https://pokeapi.co">PokéAPI</a> (thank you!) - this site last updated: 2026-05-01 - <a href="https://github.com/btenc/dexgrep">README and source</a></small>
       <p class="validators">
         <a href="https://validator.w3.org/check?uri=referer"><img src="https://www.w3.org/Icons/valid-html401" alt="Valid HTML!"></a>
         <a href="https://jigsaw.w3.org/css-validator/check/referer"><img src="https://jigsaw.w3.org/css-validator/images/vcss" alt="Valid CSS!"></a>

@@ -19,6 +19,65 @@ function renderTeamInputs() {
     .join("");
 }
 
+// URL sharing
+//
+// The URL encodes the team so it can be bookmarked or shared.
+//
+// Format:
+//   ?team=tyranitar,excadrill,rotom-wash:levitate,corviknight,,
+//     Comma-separated list of up to 6 slots.
+//     Each slot is "name" or "name:ability". Empty slots are blank.
+//     Trailing empty slots are omitted to keep URLs short.
+//   &reg=vgc-reg-ma
+
+function pushTeamToURL() {
+  const params = new URLSearchParams();
+
+  const slots = team.map(function (slot) {
+    const name = slot.name.trim();
+    const ability = slot.ability.trim();
+    if (!name) return "";
+    return ability ? name + ":" + ability : name;
+  });
+
+  while (slots.length > 0 && slots[slots.length - 1] === "") {
+    slots.pop();
+  }
+  if (slots.length > 0) {
+    params.set("team", slots.join(","));
+  }
+
+  const filterName = document.getElementById("filter").value;
+  if (filterName) {
+    params.set("reg", filterName);
+  }
+
+  setURLParams(params);
+}
+
+function loadTeamFromURL() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.toString() === "") {
+    return;
+  }
+
+  const teamParam = params.get("team");
+  if (teamParam) {
+    const parts = teamParam.split(",");
+    team = Array.from({ length: 6 }, function (_, i) {
+      const part = parts[i] || "";
+      const colonIdx = part.indexOf(":");
+      if (colonIdx !== -1) {
+        return {
+          name: part.slice(0, colonIdx),
+          ability: part.slice(colonIdx + 1),
+        };
+      }
+      return { name: part, ability: "" };
+    });
+  }
+}
+
 function calculateMatchups() {
   if (!isReady) {
     alert("still loading");
@@ -107,6 +166,7 @@ function calculateMatchups() {
     return;
   }
 
+  pushTeamToURL();
   renderMatchupsGrid(resolved);
 }
 
@@ -198,6 +258,7 @@ function resetMatchups() {
   renderTeamInputs();
   document.getElementById("filter").value = "";
   renderMatchupsGrid([]);
+  clearURLParams();
 }
 
 // Init
@@ -208,8 +269,23 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
+// Restore team inputs from URL if present, then render (regulation dropdown not ready yet)
+loadTeamFromURL();
 renderTeamInputs();
 renderMatchupsGrid([]);
-Promise.all([filtersReady, loadData()]).catch((e) => {
-  setStatus("error: " + e.message);
-});
+
+// Once filters and pokemon data are loaded, restore regulation and auto-run
+Promise.all([filtersReady, loadData()])
+  .then(function () {
+    const params = new URLSearchParams(window.location.search);
+    const reg = params.get("reg");
+    if (reg) {
+      document.getElementById("filter").value = reg;
+    }
+    if (window.location.search) {
+      calculateMatchups();
+    }
+  })
+  .catch(function (e) {
+    setStatus("error: " + e.message);
+  });

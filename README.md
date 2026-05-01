@@ -99,7 +99,6 @@ Drop a JSON file (array of PokéAPI slugs) into `filters/` and add an entry to `
 
 ## TODO
 
-- Add link sharing for team matchups
 - Add more regulations, add Smogon regulations, add generation filters
 - Add CI linting and formatting.
 - More cool stuff!

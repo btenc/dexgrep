@@ -493,17 +493,15 @@ function loadFiltersFromURL() {
   }
 
   // Sort
+  document.getElementById("sort-stat").value = "id";
+  document.getElementById("sort-dir").value = "asc";
   const sortParam = params.get("sort");
-  let lastDot = -1;
   if (sortParam) {
-    lastDot = sortParam.lastIndexOf(".");
-  }
-  if (sortParam && lastDot !== -1) {
-    document.getElementById("sort-stat").value = sortParam.slice(0, lastDot);
-    document.getElementById("sort-dir").value = sortParam.slice(lastDot + 1);
-  } else {
-    document.getElementById("sort-stat").value = "id";
-    document.getElementById("sort-dir").value = "asc";
+    const lastDot = sortParam.lastIndexOf(".");
+    if (lastDot !== -1) {
+      document.getElementById("sort-stat").value = sortParam.slice(0, lastDot);
+      document.getElementById("sort-dir").value = sortParam.slice(lastDot + 1);
+    }
   }
 
   // Re-render all filter UI sections to reflect the loaded state
