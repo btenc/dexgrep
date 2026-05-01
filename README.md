@@ -88,6 +88,11 @@ Fetched from [PokéAPI](https://pokeapi.co) and cached to your browser's localSt
 ## Development
 
 All files formatted with [Prettier](https://prettier.io) using the default config.
+Before pushing:
+
+```bash
+npx prettier@latest . --write
+```
 
 ### Adding Regulations
 
