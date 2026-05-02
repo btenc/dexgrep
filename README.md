@@ -1,6 +1,6 @@
 # DEXGREP
 
-Pokédex tools that behave kinda like `grep` (the globally searching and printing them part).
+Free and open source Pokédex tools that behave kinda like `grep` (the globally searching and printing them part).
 
 Static site. No build, no dependencies.
 Visit at: https://dexgrep.com/ or clone and run locally (see below).
@@ -31,6 +31,7 @@ Create simple or complex queries that return all Pokémon that match the constra
 2. Press **run** or hit Enter to query
 3. Results show type matchup columns computed with ability awareness
 4. Click any stat column header to sort
+5. Use **share** to copy a URL that restores the current query
 
 ### Filters
 
@@ -74,6 +75,16 @@ Create simple or complex queries that return all Pokémon that match the constra
 
 Show an analysis / breakdown of the entered team's weaknesses and resistances.
 
+### Usage
+
+1. Optionally select a regulation to constrain the Pokémon autocomplete
+2. Type a Pokémon name into any of the 6 team slots (autocomplete supported)
+3. Optionally enter an ability override in the second field for each slot to account for matchup-modifying abilities (e.g. Levitate, Flash Fire)
+4. Press **calculate** or hit Enter
+5. Use **share** to copy a URL that restores the current result table.
+
+The grid shows each Pokémon's defensive matchup against all 18 types. Aggregate weak/resist counts appear at the bottom.
+
 <details>
 <summary>Example screenshot</summary>
 
@@ -94,6 +105,15 @@ Before pushing:
 npx prettier@latest . --write
 ```
 
+### Guidelines
+
+- Any logic that could reasonably apply to more than one tool should live in `shared.js`: please pull the generic part out rather than duplicating it.
+- Readability is preferred over clever or overly compact code.
+
+### On AI Use
+
+Contributions that are AI-assisted are welcome, but all code should be reviewed and understood by the contributor before submitting. This is a "for fun" project, if you are not learning something, what's the point?
+
 ### Adding Regulations
 
 Drop a JSON file (array of PokéAPI slugs) into `filters/` and add an entry to `filters/index.json`:
@@ -102,8 +122,8 @@ Drop a JSON file (array of PokéAPI slugs) into `filters/` and add an entry to `
 { "id": "your-filter", "name": "Display Name" }
 ```
 
-## TODO
+## TODO / Issues
 
+- Generation moveset awareness for removed / added moves
 - Add more regulations, add Smogon regulations, add generation filters
-- Add CI linting and formatting.
 - More cool stuff!
