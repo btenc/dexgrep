@@ -1,4 +1,21 @@
+let selectedMatchupsGen = 0; // 0 = no generation mechanics; 1–9 = specific generation
+
 let team = Array.from({ length: 6 }, () => ({ name: "", ability: "" }));
+
+function onMatchupsGenChange(value) {
+  selectedMatchupsGen = parseInt(value) || 0;
+}
+
+// Called when the regulation filter changes.
+// If the selected filter has a gen defined, automatically applies it.
+function onMatchupsFilterChange(filterId) {
+  const meta = FILTER_META[filterId];
+  if (meta && meta.gen) {
+    selectedMatchupsGen = meta.gen;
+    const genSelect = document.getElementById("gen-select");
+    if (genSelect) genSelect.value = selectedMatchupsGen;
+  }
+}
 
 function renderTeamInputs() {
   document.getElementById("team-slots").innerHTML = team
@@ -24,7 +41,9 @@ function renderTeamInputs() {
 // The URL encodes the team so it can be bookmarked or shared.
 //
 // Format:
-//   ?team=tyranitar,excadrill,rotom-wash:levitate,corviknight,,
+//   ?gen=5
+//     Generation context (omitted when no generation mechanics are active).
+//   &team=tyranitar,excadrill,rotom-wash:levitate,corviknight,,
 //     Comma-separated list of up to 6 slots.
 //     Each slot is "name" or "name:ability". Empty slots are blank.
 //     Trailing empty slots are omitted to keep URLs short.
@@ -33,7 +52,11 @@ function renderTeamInputs() {
 function pushTeamToURL() {
   const params = new URLSearchParams();
 
-  const slots = team.map(function (slot) {
+  if (selectedMatchupsGen) {
+    params.set("gen", selectedMatchupsGen);
+  }
+
+  const slots = team.map((slot) => {
     const name = slot.name.trim();
     const ability = slot.ability.trim();
     if (!name) return "";
@@ -61,10 +84,17 @@ function loadTeamFromURL() {
     return;
   }
 
+  const genParam = params.get("gen");
+  selectedMatchupsGen = genParam ? parseInt(genParam) || 0 : 0;
+  const genSelect = document.getElementById("gen-select");
+  if (genSelect) {
+    genSelect.value = selectedMatchupsGen || "";
+  }
+
   const teamParam = params.get("team");
   if (teamParam) {
     const parts = teamParam.split(",");
-    team = Array.from({ length: 6 }, function (_, i) {
+    team = Array.from({ length: 6 }, (_, i) => {
       const part = parts[i] || "";
       const colonIdx = part.indexOf(":");
       if (colonIdx !== -1) {
@@ -84,6 +114,8 @@ function calculateMatchups() {
     return;
   }
 
+  const gen = selectedMatchupsGen;
+
   const filterName = document.getElementById("filter").value;
   if (filterName) {
     loadFilter(filterName);
@@ -95,28 +127,36 @@ function calculateMatchups() {
       const pokemon = findPokemonByName(slot.name);
       const abilitySlug = normalizeSlug(slot.ability);
 
-      // Abilities are only considered if explicitly entered
+      // Types and abilities for the selected generation
+      const genTypes = pokemon ? pokemonTypesForGen(pokemon, gen) : null;
+      const genAbilities = pokemon
+        ? pokemonAbilitiesForGen(pokemon, gen)
+        : null;
+
+      // Abilities are only considered for matchup math if explicitly entered.
+      // We use the gen-adjusted ability list for validation only.
       let effectiveAbilities = [];
       if (abilitySlug) {
         effectiveAbilities = [abilitySlug];
       }
 
+      // The effective pokemon object uses gen-adjusted types with the
+      // explicitly entered ability (or none) for matchup calculations.
       let effective = null;
       if (pokemon) {
-        effective = { ...pokemon, abilities: effectiveAbilities };
-      }
-
-      let baseTypes = null;
-      if (pokemon) {
-        baseTypes = pokemon.types;
+        effective = {
+          ...pokemon,
+          types: genTypes,
+          abilities: effectiveAbilities,
+        };
       }
 
       return {
         label: normalizeSlug(slot.name),
         ability: abilitySlug,
         pokemon: effective,
-        baseTypes: baseTypes,
-        baseAbilities: pokemon ? pokemon.abilities : null,
+        baseTypes: genTypes,
+        baseAbilities: genAbilities, // gen-adjusted, used for legality validation
       };
     });
 
@@ -130,6 +170,12 @@ function calculateMatchups() {
   const enteredAbilities = resolved.map((s) => s.ability).filter(Boolean);
   const badAbilities = unknownAbilityNames(enteredAbilities);
 
+  const futureGenPokemon = gen
+    ? resolved
+        .filter((s) => s.pokemon && s.pokemon.id > GENERATION_MAX_DEX[gen])
+        .map((s) => s.label)
+    : [];
+
   const illegalAbilities = resolved
     .filter(
       (s) =>
@@ -138,10 +184,15 @@ function calculateMatchups() {
         !badAbilities.includes(s.ability) &&
         !s.baseAbilities.includes(s.ability),
     )
-    .map((s) => `${s.label} cannot have ${s.ability}`);
+    .map(
+      (s) => `${s.label} cannot have ${s.ability} in gen ${gen || "current"}`,
+    );
 
   if (badPokemon.length) {
     issues.push("unknown pokémon: " + badPokemon.join(", "));
+  }
+  if (futureGenPokemon.length) {
+    issues.push(`not in gen ${gen}: ` + futureGenPokemon.join(", "));
   }
   if (badAbilities.length) {
     issues.push("unknown abilities: " + badAbilities.join(", "));
@@ -167,20 +218,23 @@ function calculateMatchups() {
   }
 
   pushTeamToURL();
-  renderMatchupsGrid(resolved);
+  renderMatchupsGrid(resolved, gen);
 }
 
-function renderMatchupsGrid(resolved) {
-  const typeHeaders = ALL_TYPES.map(
-    (t) => `<th class="t-${t}" title="${t}">${TYPE_SHORT[t]}</th>`,
-  ).join("");
+function renderMatchupsGrid(resolved, gen = 0) {
+  // Only show types that existed in the selected generation
+  const typesToShow = typesExistingInGen(gen);
+
+  const typeHeaders = typesToShow
+    .map((t) => `<th class="t-${t}" title="${t}">${TYPE_SHORT[t]}</th>`)
+    .join("");
 
   if (resolved.length === 0) {
     document.getElementById("matchups-grid").innerHTML = `
       <div class="team-grid">
         <table>
           <thead><tr><th>pokémon</th>${typeHeaders}</tr></thead>
-          <tbody><tr><td colspan="${ALL_TYPES.length + 1}">calculate to see results</td></tr></tbody>
+          <tbody><tr><td colspan="${typesToShow.length + 1}">calculate to see results</td></tr></tbody>
         </table>
       </div>
     `;
@@ -192,7 +246,7 @@ function renderMatchupsGrid(resolved) {
       if (!slot.pokemon) {
         return `<tr>
           <td class="form-col">${escapeHTML(slot.label)} <small>(?)</small></td>
-          ${ALL_TYPES.map(() => `<td class="form-col">?</td>`).join("")}
+          ${typesToShow.map(() => `<td class="form-col">?</td>`).join("")}
         </tr>`;
       }
       const typeBadges = slot.baseTypes.map(typeBadge).join("");
@@ -200,10 +254,12 @@ function renderMatchupsGrid(resolved) {
       if (slot.ability) {
         abilityLabel = ` <small class="form-col">${escapeHTML(slot.ability)}</small>`;
       }
-      const cells = ALL_TYPES.map((atk) => {
-        const mult = typeEffectiveness(atk, slot.pokemon);
-        return `<td class="${effClass(mult)}">${effLabel(mult)}</td>`;
-      }).join("");
+      const cells = typesToShow
+        .map((atk) => {
+          const mult = typeEffectiveness(atk, slot.pokemon, gen);
+          return `<td class="${effClass(mult)}">${effLabel(mult)}</td>`;
+        })
+        .join("");
       return `<tr><td>${escapeHTML(slot.label)} ${typeBadges}${abilityLabel}</td>${cells}</tr>`;
     })
     .join("");
@@ -211,19 +267,23 @@ function renderMatchupsGrid(resolved) {
   const WEAK_CLS = ["", "agg-w1", "agg-w2", "agg-w3"];
   const RESIST_CLS = ["", "agg-r1", "agg-r2", "agg-r3"];
 
-  const weakCells = ALL_TYPES.map((atk) => {
-    const n = resolved.filter(
-      (s) => s.pokemon && typeEffectiveness(atk, s.pokemon) >= 2,
-    ).length;
-    return `<td class="${WEAK_CLS[Math.min(n, 3)]}">${n}</td>`;
-  }).join("");
+  const weakCells = typesToShow
+    .map((atk) => {
+      const n = resolved.filter(
+        (s) => s.pokemon && typeEffectiveness(atk, s.pokemon, gen) >= 2,
+      ).length;
+      return `<td class="${WEAK_CLS[Math.min(n, 3)]}">${n}</td>`;
+    })
+    .join("");
 
-  const resistCells = ALL_TYPES.map((atk) => {
-    const n = resolved.filter(
-      (s) => s.pokemon && typeEffectiveness(atk, s.pokemon) <= 0.5,
-    ).length;
-    return `<td class="${RESIST_CLS[Math.min(n, 3)]}">${n}</td>`;
-  }).join("");
+  const resistCells = typesToShow
+    .map((atk) => {
+      const n = resolved.filter(
+        (s) => s.pokemon && typeEffectiveness(atk, s.pokemon, gen) <= 0.5,
+      ).length;
+      return `<td class="${RESIST_CLS[Math.min(n, 3)]}">${n}</td>`;
+    })
+    .join("");
 
   document.getElementById("matchups-grid").innerHTML = `
     <div class="team-grid">
@@ -255,7 +315,9 @@ function loadExample() {
 
 function resetMatchups() {
   team = Array.from({ length: 6 }, () => ({ name: "", ability: "" }));
+  selectedMatchupsGen = 0;
   renderTeamInputs();
+  document.getElementById("gen-select").value = "";
   document.getElementById("filter").value = "";
   renderMatchupsGrid([]);
   clearURLParams();
@@ -276,7 +338,7 @@ renderMatchupsGrid([]);
 
 // Once filters and pokemon data are loaded, restore regulation and auto-run
 Promise.all([filtersReady, loadData()])
-  .then(function () {
+  .then(() => {
     const params = new URLSearchParams(window.location.search);
     const reg = params.get("reg");
     if (reg) {
@@ -286,6 +348,6 @@ Promise.all([filtersReady, loadData()])
       calculateMatchups();
     }
   })
-  .catch(function (e) {
+  .catch((e) => {
     setStatus("error: " + e.message);
   });

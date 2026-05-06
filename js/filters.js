@@ -7,15 +7,16 @@ async function loadFilters() {
   // (Without the collect-then-insert step, options would appear in whichever
   // order the requests happened to finish.)
   const results = await Promise.all(
-    index.map(async ({ id, name }) => {
+    index.map(async ({ id, name, gen }) => {
       const names = await fetchJSON(FILTERS_BASE + "filters/" + id + ".json");
-      return { id, name, names };
+      return { id, name, gen: gen || null, names };
     }),
   );
 
   const select = document.getElementById("filter");
-  for (const { id, name, names } of results) {
+  for (const { id, name, gen, names } of results) {
     FILTERS[id] = names;
+    FILTER_META[id] = { gen };
     if (select) {
       const opt = document.createElement("option");
       opt.value = id;

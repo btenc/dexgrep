@@ -1,18 +1,8 @@
 const RESULT_COLS = 17;
 
-// When an ability filter is active, type matchups use only the matched ability.
-// This returns the pokemon object to use for matchup calculations.
-function filterAbilitiesForMatchup(pokemon, normalizedAbilities) {
-  if (normalizedAbilities.length === 0) {
-    return pokemon;
-  }
-  return {
-    ...pokemon,
-    abilities: pokemon.abilities.filter((a) => normalizedAbilities.includes(a)),
-  };
-}
-
 // State
+
+let selectedGen = 0; // 0 = no generation mechanics; 1–9 = specific generation
 
 let nameFilters = []; // [{ mode: "includes"|"excludes", texts: [] }]
 let pokemonTypeFilters = []; // [{ mode: "is"|"is-not", types: [] }]
@@ -20,6 +10,41 @@ let moveGroups = []; // [{ moves: [{ name, stab }] }]
 let abilityFilter = []; // ability names, OR-ed
 let typeFilters = []; // [{ mode, types: [] }]
 let statFilters = []; // [{ stat, op, val }]
+
+// Generation selector
+
+function onGenChange(value) {
+  selectedGen = parseInt(value) || 0;
+  pruneTypesForGen(selectedGen);
+  renderPokemonTypeRows();
+  renderTypeRows();
+}
+
+// Called when the regulation filter changes.
+// If the selected filter has a gen defined, automatically applies it.
+function onFilterChange(filterId) {
+  const meta = FILTER_META[filterId];
+  if (meta && meta.gen) {
+    selectedGen = meta.gen;
+    const genSelect = document.getElementById("gen-select");
+    if (genSelect) genSelect.value = selectedGen;
+    pruneTypesForGen(selectedGen);
+    renderPokemonTypeRows();
+    renderTypeRows();
+  }
+}
+
+// Removes types from active type filter state that don't exist in the given gen.
+// Called whenever the generation changes to prevent silently filtering on invalid types.
+function pruneTypesForGen(gen) {
+  const valid = new Set(typesExistingInGen(gen));
+  for (const f of pokemonTypeFilters) {
+    f.types = f.types.filter((t) => valid.has(t));
+  }
+  for (const f of typeFilters) {
+    f.types = f.types.filter((t) => valid.has(t));
+  }
+}
 
 // Name filter
 
@@ -74,6 +99,7 @@ function renderNameFilters() {
 }
 
 // Pokemon type filter
+// When a gen is selected, only show types that existed in that gen.
 
 function addPokemonTypeRow() {
   pokemonTypeFilters.push({ mode: "is", types: ["normal"] });
@@ -94,10 +120,12 @@ function removeTypeFromPokemonTypeRow(gi, ti) {
 }
 
 function renderTypeSelect(selectedType, gi, ti) {
-  const options = ALL_TYPES.map(
-    (t) =>
-      `<option value="${t}" ${t === selectedType ? "selected" : ""}>${t}</option>`,
-  ).join("");
+  const options = typesExistingInGen(selectedGen)
+    .map(
+      (t) =>
+        `<option value="${t}" ${t === selectedType ? "selected" : ""}>${t}</option>`,
+    )
+    .join("");
   return `
     ${ti > 0 ? "<small>or</small>" : ""}
     <select onchange="pokemonTypeFilters[${gi}].types[${ti}] = this.value">${options}</select>
@@ -201,6 +229,7 @@ function renderMoveRows() {
 }
 
 // Type effectiveness filter
+// When a gen is selected, only show types that existed in that gen.
 
 const TYPE_MODES = [
   { value: "resists", label: "resists (<=0.5x)" },
@@ -231,15 +260,17 @@ function renderTypeFilterRow(filter, i) {
       `<option value="${m.value}" ${m.value === filter.mode ? "selected" : ""}>${m.label}</option>`,
   ).join("");
 
-  const typeCheckboxes = ALL_TYPES.map(
-    (type) => `
+  const typeCheckboxes = typesExistingInGen(selectedGen)
+    .map(
+      (type) => `
       <label>
         <input type="checkbox" ${filter.types.includes(type) ? "checked" : ""}
           onchange="toggleType(${i},'${type}',this.checked)">
         <span class="t-${type}">${type}</span>
       </label>
     `,
-  ).join("");
+    )
+    .join("");
 
   return `
     ${i > 0 ? "<small>AND</small>" : ""}
@@ -264,22 +295,31 @@ function addStat() {
   renderStats();
 }
 
+const STAT_CHOICES = [
+  "id",
+  "hp",
+  "atk",
+  "def",
+  "spatk",
+  "spdef",
+  "speed",
+  "bst",
+];
+const OP_CHOICES = [">", ">=", "<", "<=", "="];
+
 function renderStatFilterRow(f, i) {
-  const selectOptions = function (choices, current) {
-    return choices
-      .map((c) => `<option ${c === current ? "selected" : ""}>${c}</option>`)
-      .join("");
-  };
+  const statOptions = STAT_CHOICES.map(
+    (c) => `<option ${c === f.stat ? "selected" : ""}>${c}</option>`,
+  ).join("");
+  const opOptions = OP_CHOICES.map(
+    (c) => `<option ${c === f.op ? "selected" : ""}>${c}</option>`,
+  ).join("");
 
   return `
     ${i > 0 ? "<small>AND</small>" : ""}
     <div>
-      <select onchange="statFilters[${i}].stat = this.value">
-        ${selectOptions(["id", "hp", "atk", "def", "spatk", "spdef", "speed", "bst"], f.stat)}
-      </select>
-      <select onchange="statFilters[${i}].op = this.value">
-        ${selectOptions([">", ">=", "<", "<=", "="], f.op)}
-      </select>
+      <select onchange="statFilters[${i}].stat = this.value">${statOptions}</select>
+      <select onchange="statFilters[${i}].op = this.value">${opOptions}</select>
       <input type="text" value="${f.val}" size="5"
         onchange="statFilters[${i}].val = parseInt(this.value) || 0">
       <button onclick="statFilters.splice(${i},1);renderStats()">x</button>
@@ -302,7 +342,8 @@ function renderStats() {
 //   Repeated key  = AND multiple rows of the same filter
 //
 // Full example:
-//   ?name=includes:mega,mega-x    name includes "mega" OR "mega-x"
+//   ?gen=5                        generation context (omitted when current)
+//   &name=includes:mega,mega-x    name includes "mega" OR "mega-x"
 //   &name=excludes:gmax           AND name excludes "gmax"
 //   &ptype=is:fire,dragon         AND pokemon type is fire OR dragon
 //   &moves=thunderbolt.stab,discharge.stab  AND knows thunderbolt OR discharge (with STAB)
@@ -334,18 +375,21 @@ function parseModeValues(str) {
   }
   const mode = str.slice(0, colonIdx);
   const values = str.slice(colonIdx + 1).split(",");
-  return { mode: mode, values: values };
+  return { mode, values };
 }
 
 // Saves all active filters into the URL query string.
 function pushFiltersToURL() {
   const params = new URLSearchParams();
 
+  // Generation context (omitted when no generation mechanics are active)
+  if (selectedGen) {
+    params.set("gen", selectedGen);
+  }
+
   // Name filters
   for (const f of nameFilters) {
-    const texts = f.texts.filter(function (t) {
-      return t.trim() !== "";
-    });
+    const texts = f.texts.filter((t) => t.trim() !== "");
     if (texts.length > 0) {
       params.append("name", f.mode + ":" + texts.join(","));
     }
@@ -376,9 +420,7 @@ function pushFiltersToURL() {
   }
 
   // Ability filter
-  const activeAbilities = abilityFilter.filter(function (a) {
-    return a.trim() !== "";
-  });
+  const activeAbilities = abilityFilter.filter((a) => a.trim() !== "");
   if (activeAbilities.length > 0) {
     params.set("ability", activeAbilities.join(","));
   }
@@ -419,6 +461,18 @@ function loadFiltersFromURL() {
     return;
   }
 
+  // Generation context
+  const genParam = params.get("gen");
+  if (genParam) {
+    selectedGen = parseInt(genParam) || 0;
+  } else {
+    selectedGen = 0;
+  }
+  const genSelect = document.getElementById("gen-select");
+  if (genSelect) {
+    genSelect.value = selectedGen || "";
+  }
+
   nameFilters = [];
   for (const row of params.getAll("name")) {
     const parsed = parseModeValues(row);
@@ -448,7 +502,7 @@ function loadFiltersFromURL() {
       }
       moves.push({ name: moveName, stab: stabRequired });
     }
-    moveGroups.push({ moves: moves });
+    moveGroups.push({ moves });
   }
 
   // Ability filter
@@ -468,28 +522,18 @@ function loadFiltersFromURL() {
     }
   }
 
-  const VALID_STATS = new Set([
-    "id",
-    "hp",
-    "atk",
-    "def",
-    "spatk",
-    "spdef",
-    "speed",
-    "bst",
-  ]);
   statFilters = [];
   for (const entry of params.getAll("stat")) {
     const parts = entry.split(".");
     const stat = parts[0];
     const opParam = parts[1];
     const valStr = parts[2];
-    if (!VALID_STATS.has(stat)) {
+    if (!STAT_CHOICES.includes(stat)) {
       continue;
     }
     const op = PARAM_TO_OP[opParam] || ">";
     const val = parseInt(valStr) || 0;
-    statFilters.push({ stat: stat, op: op, val: val });
+    statFilters.push({ stat, op, val });
   }
 
   // Sort
@@ -504,7 +548,8 @@ function loadFiltersFromURL() {
     }
   }
 
-  // Re-render all filter UI sections to reflect the loaded state
+  // Prune any types from state that don't exist in the restored gen, then render.
+  pruneTypesForGen(selectedGen);
   renderNameFilters();
   renderPokemonTypeRows();
   renderMoveRows();
@@ -521,20 +566,64 @@ async function runQuery() {
     return;
   }
 
+  const gen = selectedGen;
+
   const allMoveNames = moveGroups
     .flatMap((group) => group.moves)
     .map((move) => normalizeSlug(move.name))
     .filter(Boolean);
+
+  const normalizedAbilities = abilityFilter.map(normalizeSlug).filter(Boolean);
+  const filterName = document.getElementById("filter").value;
+  if (filterName) {
+    loadFilter(filterName);
+  }
+
+  // Validate before hitting PokeAPI — unknown moves would cause a confusing HTTP 404.
+  const badMoves = unknownMoveNames(allMoveNames);
+  const badAbilities = unknownAbilityNames(normalizedAbilities);
+
+  // Moves that exist but weren't learnable by any pokemon in the selected gen.
+  let movesNotInGen = [];
+  if (gen) {
+    movesNotInGen = allMoveNames.filter(
+      (name) =>
+        !badMoves.includes(name) &&
+        !Object.values(pokemonDatabase).some((p) =>
+          moveAvailableInGen(p.moves[name] ?? 0, gen),
+        ),
+    );
+  }
+
+  const issues = [];
+  if (badMoves.length) {
+    issues.push("unknown moves: " + badMoves.join(", "));
+  }
+  if (badAbilities.length) {
+    issues.push("unknown abilities: " + badAbilities.join(", "));
+  }
+  if (gen && gen <= 2 && normalizedAbilities.length > 0) {
+    issues.push("abilities did not exist until gen 3");
+  }
+  if (movesNotInGen.length) {
+    issues.push(`move not in gen ${gen}: ` + movesNotInGen.join(", "));
+  }
+  if (issues.length) {
+    alert(issues.join("\n"));
+    return;
+  }
+
+  if (filterName && !filterSets[filterName]) {
+    alert("filter not yet loaded, please try again");
+    return;
+  }
+
+  // Fetch move types for STAB checking — only for known moves (unknown already rejected above).
   try {
     await Promise.all(allMoveNames.map(cacheMoveType));
   } catch (e) {
     alert("failed to fetch move type data: " + e.message);
     return;
-  }
-
-  const filterName = document.getElementById("filter").value;
-  if (filterName) {
-    loadFilter(filterName);
   }
 
   const normalizedMoveGroups = moveGroups
@@ -548,31 +637,18 @@ async function runQuery() {
     )
     .filter((g) => g.length > 0);
 
-  const normalizedAbilities = abilityFilter.map(normalizeSlug).filter(Boolean);
-
-  if (filterName && !filterSets[filterName]) {
-    alert("filter not yet loaded, please try again");
-    return;
-  }
-
-  const badMoves = unknownMoveNames(allMoveNames);
-  const badAbilities = unknownAbilityNames(normalizedAbilities);
-  const issues = [];
-  if (badMoves.length) {
-    issues.push("unknown moves: " + badMoves.join(", "));
-  }
-  if (badAbilities.length) {
-    issues.push("unknown abilities: " + badAbilities.join(", "));
-  }
-  if (issues.length) {
-    alert(issues.join("\n"));
-    return;
-  }
-
-  // P1: cheap filters
-  // These don't need type matchup math so we run them first to narrow the list.
+  // P1: cheap filters — narrow the list without type matchup math.
   const candidates = Object.values(pokemonDatabase).filter((pokemon) => {
+    if (gen && pokemon.id > GENERATION_MAX_DEX[gen]) {
+      return false;
+    }
+
     const fullName = pokeapiName(pokemon);
+
+    // Resolve types and abilities for the selected gen so all filters below
+    // operate on what the pokemon actually was in that generation.
+    const genTypes = pokemonTypesForGen(pokemon, gen);
+    const genAbilities = pokemonAbilitiesForGen(pokemon, gen);
 
     for (const f of nameFilters) {
       const activeTexts = f.texts.map(normalizeSlug).filter(Boolean);
@@ -592,7 +668,7 @@ async function runQuery() {
       if (f.types.length === 0) {
         continue;
       }
-      const hasAny = f.types.some((t) => pokemon.types.includes(t));
+      const hasAny = f.types.some((t) => genTypes.includes(t));
       if (f.mode === "is" && !hasAny) {
         return false;
       }
@@ -602,25 +678,28 @@ async function runQuery() {
     }
 
     if (normalizedAbilities.length > 0) {
-      if (!normalizedAbilities.some((a) => pokemon.abilities.includes(a))) {
+      if (!normalizedAbilities.some((a) => genAbilities.includes(a))) {
         return false;
       }
     }
 
-    if (
-      filterName &&
-      filterSets[filterName] &&
-      !filterSets[filterName].has(fullName)
-    ) {
+    if (filterName && !filterSets[filterName].has(fullName)) {
       return false;
     }
 
     for (const group of normalizedMoveGroups) {
       const groupMatches = group.some((move) => {
-        if (!pokemon.moves[move.name]) {
+        const genBits = pokemon.moves[move.name] ?? 0;
+        let moveKnown;
+        if (gen) {
+          moveKnown = moveAvailableInGen(genBits, gen);
+        } else {
+          moveKnown = genBits !== 0;
+        }
+        if (!moveKnown) {
           return false;
         }
-        if (move.stab && (!move.type || !pokemon.types.includes(move.type))) {
+        if (move.stab && (!move.type || !genTypes.includes(move.type))) {
           return false;
         }
         return true;
@@ -633,21 +712,30 @@ async function runQuery() {
     return true;
   });
 
-  // P2: determine which ability to use for type matchup math.
-  const candidatesWithAbilityFiltered = candidates.map((pokemon) => ({
-    pokemon,
-    withAbilityFiltered: filterAbilitiesForMatchup(
-      pokemon,
-      normalizedAbilities,
-    ),
-  }));
-
-  // P3: type effectiveness and stat filters (these need the matchup from phase 2)
-  const results = candidatesWithAbilityFiltered.filter(
-    ({ pokemon, withAbilityFiltered }) => {
+  // P2+P3: build gen-adjusted view and apply type effectiveness + stat filters.
+  const results = candidates
+    .map((pokemon) => {
+      const genPokemon = pokemonForGen(pokemon, gen);
+      let abilities = genPokemon.abilities;
+      if (normalizedAbilities.length > 0) {
+        abilities = genPokemon.abilities.filter((a) =>
+          normalizedAbilities.includes(a),
+        );
+      }
+      return {
+        pokemon,
+        genPokemon,
+        withAbilityFiltered: { ...genPokemon, abilities },
+      };
+    })
+    .filter(({ genPokemon, withAbilityFiltered }) => {
       for (const filter of typeFilters) {
         for (const type of filter.types) {
-          const effectiveness = typeEffectiveness(type, withAbilityFiltered);
+          const effectiveness = typeEffectiveness(
+            type,
+            withAbilityFiltered,
+            gen,
+          );
           if (filter.mode === "resists" && effectiveness > 0.5) {
             return false;
           }
@@ -667,7 +755,7 @@ async function runQuery() {
       }
 
       for (const f of statFilters) {
-        const v = statValue(pokemon, f.stat);
+        const v = statValue(genPokemon, f.stat);
         if (f.op === ">" && !(v > f.val)) {
           return false;
         }
@@ -686,14 +774,13 @@ async function runQuery() {
       }
 
       return true;
-    },
-  );
+    });
 
   const sortStat = document.getElementById("sort-stat").value;
   const sortDir = document.getElementById("sort-dir").value;
   results.sort((a, b) => {
-    const valA = statValue(a.pokemon, sortStat);
-    const valB = statValue(b.pokemon, sortStat);
+    const valA = statValue(a.genPokemon, sortStat);
+    const valB = statValue(b.genPokemon, sortStat);
     if (sortDir === "asc") {
       return valA - valB;
     }
@@ -701,20 +788,20 @@ async function runQuery() {
   });
 
   pushFiltersToURL();
-  renderResults(results, sortStat, sortDir, normalizedAbilities);
+  renderResults(results, sortStat, sortDir, normalizedAbilities, gen);
 }
 
 // Render results
 
-function compactType(type, pokemon) {
+function compactType(type, pokemon, gen) {
   let star = "";
-  if (abilityChangesMatchup(type, pokemon)) {
+  if (abilityChangesMatchup(type, pokemon, gen)) {
     star = "*";
   }
   return `<span class="ct t-${type}">${TYPE_SHORT[type]}${star}</span>`;
 }
 
-function renderResults(results, sortStat, sortDir, normalizedAbilities) {
+function renderResults(results, sortStat, sortDir, normalizedAbilities, gen) {
   document.getElementById("result-count").textContent =
     `${results.length} result(s)`;
 
@@ -733,13 +820,12 @@ function renderResults(results, sortStat, sortDir, normalizedAbilities) {
   }
 
   document.getElementById("results-body").innerHTML = results
-    .map(({ pokemon, withAbilityFiltered }) => {
-      const matchupGroups = typeMatchups(withAbilityFiltered);
-      function col(types) {
-        return types.map((t) => compactType(t, withAbilityFiltered)).join(" ");
-      }
+    .map(({ pokemon, genPokemon, withAbilityFiltered }) => {
+      const matchupGroups = typeMatchups(withAbilityFiltered, gen);
+      const col = (types) =>
+        types.map((t) => compactType(t, withAbilityFiltered, gen)).join(" ");
 
-      const abilities = pokemon.abilities
+      const abilities = genPokemon.abilities
         .map((ability) => {
           const affectsMatchup = TYPE_MATCHUP_ABILITIES.has(ability);
           let star = "";
@@ -764,15 +850,15 @@ function renderResults(results, sortStat, sortDir, normalizedAbilities) {
         <td class="dex">${pokemon.id}</td>
         <td>${escapeHTML(pokemon.baseName)}</td>
         <td class="form-col">${escapeHTML(pokemon.form)}</td>
-        <td>${pokemon.types.map(typeBadge).join("")}</td>
+        <td>${genPokemon.types.map(typeBadge).join("")}</td>
         <td class="form-col">${abilities}</td>
-        <td class="sv">${pokemon.stats.hp}</td>
-        <td class="sv">${pokemon.stats.atk}</td>
-        <td class="sv">${pokemon.stats.def}</td>
-        <td class="sv">${pokemon.stats.spatk}</td>
-        <td class="sv">${pokemon.stats.spdef}</td>
-        <td class="sv">${pokemon.stats.speed}</td>
-        <td class="sv">${bst(pokemon)}</td>
+        <td class="sv">${genPokemon.stats.hp}</td>
+        <td class="sv">${genPokemon.stats.atk}</td>
+        <td class="sv">${genPokemon.stats.def}</td>
+        <td class="sv">${genPokemon.stats.spatk}</td>
+        <td class="sv">${genPokemon.stats.spdef}</td>
+        <td class="sv">${genPokemon.stats.speed}</td>
+        <td class="sv">${bst(genPokemon)}</td>
         <td>${col(matchupGroups.immune)}</td>
         <td>${col(matchupGroups.quarter)}</td>
         <td>${col(matchupGroups.half)}</td>
@@ -801,6 +887,7 @@ function sortBy(stat) {
 // Reset
 
 function reset() {
+  selectedGen = 0;
   nameFilters = [];
   pokemonTypeFilters = [];
   moveGroups = [];
@@ -813,6 +900,7 @@ function reset() {
   renderTypeRows();
   renderStats();
   renderAbilities();
+  document.getElementById("gen-select").value = "";
   document.getElementById("sort-stat").value = "id";
   document.getElementById("sort-dir").value = "asc";
   document.getElementById("filter").value = "";

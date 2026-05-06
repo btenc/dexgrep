@@ -15,6 +15,25 @@
 
     <fieldset>
       <legend>
+        GENERATION MECHANICS (limits dex#, learnsets, types, abilities, and base
+        stats)
+      </legend>
+      <select id="gen-select" onchange="onGenChange(this.value)">
+        <option value="">none</option>
+        <option value="1">gen 1 (RBY)</option>
+        <option value="2">gen 2 (GSC)</option>
+        <option value="3">gen 3 (RSE)</option>
+        <option value="4">gen 4 (DPP)</option>
+        <option value="5">gen 5 (BW)</option>
+        <option value="6">gen 6 (XY)</option>
+        <option value="7">gen 7 (SM)</option>
+        <option value="8">gen 8 (SwSh)</option>
+        <option value="9">gen 9 (SV)</option>
+      </select>
+    </fieldset>
+
+    <fieldset>
+      <legend>
         NAME / FORM (rows are AND-ed, strings within a row are OR-ed)
       </legend>
       <div id="name-rows"></div>
@@ -59,7 +78,7 @@
 
     <fieldset>
       <legend>FILTER / REGULATION</legend>
-      <select id="filter">
+      <select id="filter" onchange="onFilterChange(this.value)">
         <option value="">all</option>
       </select>
     </fieldset>
