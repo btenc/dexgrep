@@ -308,8 +308,10 @@ function loadExample() {
     { name: "sinistcha", ability: "" },
     { name: "incineroar", ability: "" },
   ];
+  selectedMatchupsGen = 9;
+  document.getElementById("gen-select").value = 9;
+  document.getElementById("filter").value = "vgc-reg-ma";
   renderTeamInputs();
-  document.getElementById("filter").value = "";
   renderMatchupsGrid([]);
 }
 

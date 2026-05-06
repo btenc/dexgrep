@@ -913,6 +913,9 @@ function reset() {
 function loadExample() {
   reset();
 
+  selectedGen = 9;
+  document.getElementById("gen-select").value = 9;
+
   moveGroups = [
     {
       moves: [

@@ -124,6 +124,5 @@ Drop a JSON file (array of PokéAPI slugs) into `filters/` and add an entry to `
 
 ## TODO / Issues
 
-- Generation moveset awareness for removed / added moves
 - Add more regulations, add Smogon regulations, add generation filters
 - More cool stuff!
