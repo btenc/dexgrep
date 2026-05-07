@@ -830,7 +830,7 @@ function injectLayout() {
   const footerEl = document.getElementById("site-footer");
   if (footerEl) {
     footerEl.innerHTML = `
-      <small>Data from <a href="https://pokeapi.co">PokéAPI</a> (thank you!) - this site last updated: 2026-05-06 - <a href="https://github.com/btenc/dexgrep">README and source</a></small>
+      <small>Data from <a href="https://pokeapi.co">PokéAPI</a> (thank you!) - this site last updated: 2026-05-07 - <a href="https://github.com/btenc/dexgrep">README and source</a></small>
       <p class="validators">
         <a href="https://validator.w3.org/check?uri=referer"><img src="https://www.w3.org/Icons/valid-html401" alt="Valid HTML!"></a>
         <a href="https://jigsaw.w3.org/css-validator/check/referer"><img src="https://jigsaw.w3.org/css-validator/images/vcss" alt="Valid CSS!"></a>
