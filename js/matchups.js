@@ -6,17 +6,6 @@ function onMatchupsGenChange(value) {
   selectedMatchupsGen = parseInt(value) || 0;
 }
 
-// Called when the regulation filter changes.
-// If the selected filter has a gen defined, automatically applies it.
-function onMatchupsFilterChange(filterId) {
-  const meta = FILTER_META[filterId];
-  if (meta && meta.gen) {
-    selectedMatchupsGen = meta.gen;
-    const genSelect = document.getElementById("gen-select");
-    if (genSelect) genSelect.value = selectedMatchupsGen;
-  }
-}
-
 function renderTeamInputs() {
   document.getElementById("team-slots").innerHTML = team
     .map(
@@ -47,7 +36,6 @@ function renderTeamInputs() {
 //     Comma-separated list of up to 6 slots.
 //     Each slot is "name" or "name:ability". Empty slots are blank.
 //     Trailing empty slots are omitted to keep URLs short.
-//   &reg=vgc-reg-ma
 
 function pushTeamToURL() {
   const params = new URLSearchParams();
@@ -68,11 +56,6 @@ function pushTeamToURL() {
   }
   if (slots.length > 0) {
     params.set("team", slots.join(","));
-  }
-
-  const filterName = document.getElementById("filter").value;
-  if (filterName) {
-    params.set("reg", filterName);
   }
 
   setURLParams(params);
@@ -115,11 +98,6 @@ function calculateMatchups() {
   }
 
   const gen = selectedMatchupsGen;
-
-  const filterName = document.getElementById("filter").value;
-  if (filterName) {
-    loadFilter(filterName);
-  }
 
   const resolved = team
     .filter((slot) => slot.name.trim())
@@ -172,7 +150,7 @@ function calculateMatchups() {
 
   const futureGenPokemon = gen
     ? resolved
-        .filter((s) => s.pokemon && s.pokemon.id > GENERATION_MAX_DEX[gen])
+        .filter((s) => s.pokemon && !pokemonExistsInGen(s.pokemon, gen))
         .map((s) => s.label)
     : [];
 
@@ -199,18 +177,6 @@ function calculateMatchups() {
   }
   if (illegalAbilities.length) {
     issues.push(illegalAbilities.join(", "));
-  }
-  if (filterName && !filterSets[filterName]) {
-    issues.push("filter not yet loaded, please try again");
-  } else if (filterName) {
-    const illegal = resolved
-      .filter(
-        (s) => s.pokemon && !filterSets[filterName].has(pokeapiName(s.pokemon)),
-      )
-      .map((s) => s.label);
-    if (illegal.length) {
-      issues.push("not in " + filterName + ": " + illegal.join(", "));
-    }
   }
   if (issues.length) {
     alert(issues.join("\n"));
@@ -310,7 +276,6 @@ function loadExample() {
   ];
   selectedMatchupsGen = 9;
   document.getElementById("gen-select").value = 9;
-  document.getElementById("filter").value = "vgc-reg-ma";
   renderTeamInputs();
   renderMatchupsGrid([]);
 }
@@ -320,7 +285,6 @@ function resetMatchups() {
   selectedMatchupsGen = 0;
   renderTeamInputs();
   document.getElementById("gen-select").value = "";
-  document.getElementById("filter").value = "";
   renderMatchupsGrid([]);
   clearURLParams();
 }
@@ -328,24 +292,21 @@ function resetMatchups() {
 // Init
 
 document.addEventListener("keydown", (e) => {
-  if (e.key === "Enter" && e.target.tagName !== "BUTTON") {
+  if (
+    e.key === "Enter" &&
+    e.target.tagName !== "BUTTON" &&
+    e.target.tagName !== "SELECT"
+  ) {
     calculateMatchups();
   }
 });
 
-// Restore team inputs from URL if present, then render (regulation dropdown not ready yet)
 loadTeamFromURL();
 renderTeamInputs();
 renderMatchupsGrid([]);
 
-// Once filters and pokemon data are loaded, restore regulation and auto-run
-Promise.all([filtersReady, loadData()])
+loadData()
   .then(() => {
-    const params = new URLSearchParams(window.location.search);
-    const reg = params.get("reg");
-    if (reg) {
-      document.getElementById("filter").value = reg;
-    }
     if (window.location.search) {
       calculateMatchups();
     }

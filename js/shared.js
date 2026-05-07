@@ -24,7 +24,7 @@ const TYPE_CHART = {
 };
 
 // Gen 2–5: no Fairy type.
-// Steel also resisted Ghost and Dark in these gens - that resistance was removed in Gen 6.
+// Steel also resisted Ghost and Dark in these gens (resistance was removed in Gen 6).
 // prettier-ignore
 const TYPE_CHART_GEN2_5 = {
   normal:   { rock: 0.5, ghost: 0, steel: 0.5 },
@@ -290,7 +290,7 @@ function typeEffectiveness(attackType, pokemon, gen = 0) {
 
   // Wonder Guard: only super-effective moves land (checked after other modifiers)
   if (pokemon.abilities.includes("wonder-guard") && mult < 2) {
-    return 0;
+    return 0; // common shedninja L
   }
 
   return mult;
@@ -372,7 +372,7 @@ const POKEAPI_STAT_KEYS = {
   "special-attack": "spatk", "special-defense": "spdef", speed: "speed",
 };
 
-const cachedMoveTypes = storageGet(CACHE_KEY + "_mt") || {};
+let cachedMoveTypes = storageGet(CACHE_KEY + "_mt") || {};
 let pokemonDatabase = {};
 let isReady = false;
 
@@ -399,7 +399,7 @@ function pokemonTypesForGen(pokemon, gen) {
 // Abilities were introduced in gen 3, so gens 1 and 2 always return an empty list.
 // For gen 3+, we start from the current ability slots and apply past overrides.
 // Entries are sorted ascending so the closest applicable entry (smallest upToGen >= gen)
-// wins for each slot — later entries for the same slot are ignored.
+// wins for each slot (later entries for the same slot are ignored).
 function pokemonAbilitiesForGen(pokemon, gen) {
   if (!gen) return pokemon.abilities;
   if (gen <= 2) return [];
@@ -426,7 +426,7 @@ function pokemonAbilitiesForGen(pokemon, gen) {
 
 // Returns the Pokemon's base stats as they were in the given generation.
 // Entries are sorted ascending so the closest applicable entry (smallest upToGen >= gen)
-// wins for each stat — later entries for the same stat are ignored.
+// wins for each stat (later entries for the same stat are ignored).
 function pokemonStatsForGen(pokemon, gen) {
   if (!gen) return pokemon.stats;
   const stats = { ...pokemon.stats };
@@ -456,6 +456,25 @@ function pokemonForGen(pokemon, gen) {
     abilities: pokemonAbilitiesForGen(pokemon, gen),
     stats: pokemonStatsForGen(pokemon, gen),
   };
+}
+
+// Returns true if the given pokemon existed in the given generation.
+// Checks dex number range, then learnset data for alternate forms.
+// Falls back to hard minimums for known form types with no learnset in PokeAPI.
+function pokemonExistsInGen(pokemon, gen) {
+  if (!gen) return true;
+  if (pokemon.id > GENERATION_MAX_DEX[gen]) return false;
+  if (pokemon.form) {
+    const moveBits = Object.values(pokemon.moves);
+    if (moveBits.length > 0) {
+      const mask = (1 << gen) - 1;
+      if (!moveBits.some((bits) => (bits & mask) !== 0)) return false;
+    } else {
+      if (pokemon.form === "gmax" && gen < 8) return false;
+      if (pokemon.form.startsWith("mega") && gen < 6) return false;
+    }
+  }
+  return true;
 }
 
 // Filter and lookup utilities
@@ -697,7 +716,7 @@ function buildDataLists() {
   makeDataList("pokemon-datalist", pokemonNames);
 }
 
-// Validation helpers — return slugs not found in the database
+// Validation helpers (return slugs not found in the database)
 
 function unknownMoveNames(slugs) {
   const all = new Set(
@@ -750,11 +769,8 @@ function refreshData() {
     }
   }
   pokemonDatabase = {};
+  cachedMoveTypes = {};
   isReady = false;
-  // cachedMoveTypes is a const so it can't be reassigned — clear it by deleting each key
-  for (const k of Object.keys(cachedMoveTypes)) {
-    delete cachedMoveTypes[k];
-  }
   setProgress(0);
   loadData().catch((e) => {
     setStatus("error: " + e.message);

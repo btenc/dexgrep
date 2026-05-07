@@ -10,6 +10,7 @@ let moveGroups = []; // [{ moves: [{ name, stab }] }]
 let abilityFilter = []; // ability names, OR-ed
 let typeFilters = []; // [{ mode, types: [] }]
 let statFilters = []; // [{ stat, op, val }]
+let selectedFilters = new Set(); // regulation IDs, AND-ed
 
 // Generation selector
 
@@ -20,17 +21,53 @@ function onGenChange(value) {
   renderTypeRows();
 }
 
-// Called when the regulation filter changes.
-// If the selected filter has a gen defined, automatically applies it.
-function onFilterChange(filterId) {
-  const meta = FILTER_META[filterId];
-  if (meta && meta.gen) {
-    selectedGen = meta.gen;
-    const genSelect = document.getElementById("gen-select");
-    if (genSelect) genSelect.value = selectedGen;
-    pruneTypesForGen(selectedGen);
-    renderPokemonTypeRows();
-    renderTypeRows();
+function renderFilterSets() {
+  const categories = {};
+  for (const [id, meta] of Object.entries(FILTER_META)) {
+    const cat = meta.category || "Other";
+    if (!categories[cat]) categories[cat] = [];
+    categories[cat].push([id, meta]);
+  }
+
+  document.getElementById("filter-rows").innerHTML = Object.entries(categories)
+    .map(([category, filters]) => {
+      const hasChecked = filters.some(([id]) => selectedFilters.has(id));
+      const checkboxes = filters
+        .map(
+          ([id, meta]) => `
+          <label>
+            <input type="checkbox" value="${escapeHTML(id)}"
+              ${selectedFilters.has(id) ? "checked" : ""}
+              onchange="onFilterToggle('${escapeHTML(id)}', this.checked)">
+            ${escapeHTML(meta.name || id)}
+          </label>
+        `,
+        )
+        .join(" ");
+      return `
+        <details ${hasChecked ? "open" : ""}>
+          <summary>${escapeHTML(category)}</summary>
+          <div>${checkboxes}</div>
+        </details>
+      `;
+    })
+    .join("");
+}
+
+function onFilterToggle(filterId, checked) {
+  if (checked) {
+    selectedFilters.add(filterId);
+    const meta = FILTER_META[filterId];
+    if (meta && meta.gen) {
+      selectedGen = meta.gen;
+      const genSelect = document.getElementById("gen-select");
+      if (genSelect) genSelect.value = selectedGen;
+      pruneTypesForGen(selectedGen);
+      renderPokemonTypeRows();
+      renderTypeRows();
+    }
+  } else {
+    selectedFilters.delete(filterId);
   }
 }
 
@@ -354,7 +391,7 @@ function renderStats() {
 //   &stat=speed.gt.80             AND speed > 80
 //   &stat=hp.gte.100              AND hp >= 100
 //   &sort=spatk.desc
-//   &reg=reg-ma
+//   &filter=vgc-reg-ma
 
 const OP_TO_PARAM = {
   ">": "gt",
@@ -444,10 +481,9 @@ function pushFiltersToURL() {
     params.set("sort", sortStat + "." + sortDir);
   }
 
-  // Regulation/format filter
-  const filterName = document.getElementById("filter").value;
-  if (filterName) {
-    params.set("reg", filterName);
+  // Regulation/format filters (AND-ed)
+  for (const id of selectedFilters) {
+    params.append("filter", id);
   }
 
   setURLParams(params);
@@ -574,9 +610,8 @@ async function runQuery() {
     .filter(Boolean);
 
   const normalizedAbilities = abilityFilter.map(normalizeSlug).filter(Boolean);
-  const filterName = document.getElementById("filter").value;
-  if (filterName) {
-    loadFilter(filterName);
+  for (const id of selectedFilters) {
+    loadFilter(id);
   }
 
   // Validate before hitting PokeAPI — unknown moves would cause a confusing HTTP 404.
@@ -613,12 +648,13 @@ async function runQuery() {
     return;
   }
 
-  if (filterName && !filterSets[filterName]) {
+  const unloadedFilters = [...selectedFilters].filter((id) => !filterSets[id]);
+  if (unloadedFilters.length > 0) {
     alert("filter not yet loaded, please try again");
     return;
   }
 
-  // Fetch move types for STAB checking — only for known moves (unknown already rejected above).
+  // Fetch move types for STAB checking only for known moves (unknown already rejected above).
   try {
     await Promise.all(allMoveNames.map(cacheMoveType));
   } catch (e) {
@@ -637,9 +673,9 @@ async function runQuery() {
     )
     .filter((g) => g.length > 0);
 
-  // P1: cheap filters — narrow the list without type matchup math.
+  // P1: cheap filters: narrow the list without type matchup math.
   const candidates = Object.values(pokemonDatabase).filter((pokemon) => {
-    if (gen && pokemon.id > GENERATION_MAX_DEX[gen]) {
+    if (!pokemonExistsInGen(pokemon, gen)) {
       return false;
     }
 
@@ -683,8 +719,8 @@ async function runQuery() {
       }
     }
 
-    if (filterName && !filterSets[filterName].has(fullName)) {
-      return false;
+    for (const regId of selectedFilters) {
+      if (!filterSets[regId].has(fullName)) return false;
     }
 
     for (const group of normalizedMoveGroups) {
@@ -900,10 +936,11 @@ function reset() {
   renderTypeRows();
   renderStats();
   renderAbilities();
+  selectedFilters = new Set();
+  renderFilterSets();
   document.getElementById("gen-select").value = "";
   document.getElementById("sort-stat").value = "id";
   document.getElementById("sort-dir").value = "asc";
-  document.getElementById("filter").value = "";
   document.getElementById("result-count").textContent = "";
   document.getElementById("results-body").innerHTML =
     `<tr><td colspan="${RESULT_COLS}">run a query to see result(s)</td></tr>`;
@@ -940,7 +977,11 @@ function loadExample() {
 // Init
 
 document.addEventListener("keydown", (e) => {
-  if (e.key === "Enter" && e.target.tagName !== "BUTTON") {
+  if (
+    e.key === "Enter" &&
+    e.target.tagName !== "BUTTON" &&
+    e.target.tagName !== "SELECT"
+  ) {
     runQuery();
   }
 });
@@ -952,10 +993,12 @@ loadFiltersFromURL();
 Promise.all([filtersReady, loadData()])
   .then(() => {
     const params = new URLSearchParams(window.location.search);
-    const reg = params.get("reg");
-    if (reg) {
-      document.getElementById("filter").value = reg;
+    for (const reg of params.getAll("filter")) {
+      if (FILTER_META[reg]) {
+        selectedFilters.add(reg);
+      }
     }
+    renderFilterSets();
     if (window.location.search) {
       runQuery();
     }

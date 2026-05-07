@@ -41,7 +41,7 @@ Create simple or complex queries that return all Pokémon that match the constra
 - **Type Effectiveness**: filter by how a type hits the Pokémon (resists, immune, weak, etc.)
 - **Ability**: filter by ability name, OR-able
 - **Stats**: numeric comparisons on any stat, BST, or dex #, AND-able
-- **Filter / Regulation**: limit results to a specific competitive format or other filters.
+- **Filters**: limit results to one or more competitive formats or curated Pokédex lists, AND-able across categories
 
 ### Examples
 
@@ -77,7 +77,7 @@ Show an analysis / breakdown of the entered team's weaknesses and resistances.
 
 ### Usage
 
-1. Optionally select a regulation to constrain the Pokémon autocomplete
+1. Optionally select a filter to constrain the Pokémon to a specific format or list
 2. Type a Pokémon name into any of the 6 team slots (autocomplete supported)
 3. Optionally enter an ability override in the second field for each slot to account for matchup-modifying abilities (e.g. Levitate, Flash Fire)
 4. Press **calculate** or hit Enter
@@ -114,15 +114,17 @@ npx prettier@latest . --write
 
 Contributions that are AI-assisted are welcome, but all code should be reviewed and understood by the contributor before submitting. This is a "for fun" project, if you are not learning something, what's the point?
 
-### Adding Regulations
+### Adding Filters
 
 Drop a JSON file (array of PokéAPI slugs) into `filters/` and add an entry to `filters/index.json`:
 
 ```json
-{ "id": "your-filter", "name": "Display Name" }
+{ "id": "your-filter", "name": "Display Name", "category": "Category Name" }
 ```
+
+The optional `gen` field auto-applies a generation when the filter is selected. The `category` field groups filters into collapsible sections in the UI.
 
 ## TODO / Issues
 
-- Add more regulations, add Smogon regulations, add generation filters
+- Add more filters (Smogon tiers, generation dex lists, etc.)
 - More cool stuff!
