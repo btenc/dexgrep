@@ -973,15 +973,7 @@ function loadExample() {
 
 // Init
 
-document.addEventListener("keydown", (e) => {
-  if (
-    e.key === "Enter" &&
-    e.target.tagName !== "BUTTON" &&
-    e.target.tagName !== "SELECT"
-  ) {
-    runQuery();
-  }
-});
+bindEnterKey(runQuery);
 
 // Render filter UI immediately (regulation dropdown may not be ready yet)
 loadFiltersFromURL();

@@ -1,5 +1,7 @@
 // Constants
 
+const SITE_UPDATED = "2026-05-08";
+
 // Gen 6+ (current): 18 types including Fairy.
 // prettier-ignore
 const TYPE_CHART = {
@@ -213,6 +215,19 @@ function setURLParams(params) {
 
 function clearURLParams() {
   history.replaceState(null, "", window.location.pathname);
+}
+
+// Binds the Enter key to a callback, ignoring presses from buttons and selects.
+function bindEnterKey(callback) {
+  document.addEventListener("keydown", function (e) {
+    if (
+      e.key === "Enter" &&
+      e.target.tagName !== "BUTTON" &&
+      e.target.tagName !== "SELECT"
+    ) {
+      callback();
+    }
+  });
 }
 
 // Share the current page URL via the native share sheet, or copy to clipboard as fallback.
@@ -733,22 +748,22 @@ function unknownAbilityNames(slugs) {
 }
 
 // Looks up a pokemon by name or API slug (e.g. "charizard-mega-x").
+// Exact API name takes priority over base name; both resolved in one pass.
 function findPokemonByName(nameInput) {
   const slug = normalizeSlug(nameInput);
   if (!slug) {
     return null;
   }
+  let baseMatch = null;
   for (const p of Object.values(pokemonDatabase)) {
     if (pokeapiName(p) === slug) {
       return p;
     }
-  }
-  for (const p of Object.values(pokemonDatabase)) {
-    if (p.baseName === slug) {
-      return p;
+    if (!baseMatch && p.baseName === slug) {
+      baseMatch = p;
     }
   }
-  return null;
+  return baseMatch;
 }
 
 function refreshData() {
@@ -830,7 +845,7 @@ function injectLayout() {
   const footerEl = document.getElementById("site-footer");
   if (footerEl) {
     footerEl.innerHTML = `
-      <small>Data from <a href="https://pokeapi.co">PokéAPI</a> (thank you!) - this site last updated: 2026-05-08 - <a href="https://github.com/btenc/dexgrep">README and source</a></small>
+      <small>Data from <a href="https://pokeapi.co">PokéAPI</a> (thank you!) - this site last updated: ${SITE_UPDATED} - <a href="https://github.com/btenc/dexgrep">README and source</a></small>
       <p class="validators">
         <a href="https://validator.w3.org/check?uri=referer"><img src="https://www.w3.org/Icons/valid-html401" alt="Valid HTML!"></a>
         <a href="https://jigsaw.w3.org/css-validator/check/referer"><img src="https://jigsaw.w3.org/css-validator/images/vcss" alt="Valid CSS!"></a>

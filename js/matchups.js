@@ -172,11 +172,15 @@ function calculateMatchups() {
   if (futureGenPokemon.length) {
     issues.push(`not in gen ${gen}: ` + futureGenPokemon.join(", "));
   }
-  if (badAbilities.length) {
-    issues.push("unknown abilities: " + badAbilities.join(", "));
-  }
-  if (illegalAbilities.length) {
-    issues.push(illegalAbilities.join(", "));
+  if (gen && gen <= 2 && enteredAbilities.length > 0) {
+    issues.push("abilities did not exist until gen 3");
+  } else {
+    if (badAbilities.length) {
+      issues.push("unknown abilities: " + badAbilities.join(", "));
+    }
+    if (illegalAbilities.length) {
+      issues.push(illegalAbilities.join(", "));
+    }
   }
   if (issues.length) {
     alert(issues.join("\n"));
@@ -291,15 +295,7 @@ function resetMatchups() {
 
 // Init
 
-document.addEventListener("keydown", (e) => {
-  if (
-    e.key === "Enter" &&
-    e.target.tagName !== "BUTTON" &&
-    e.target.tagName !== "SELECT"
-  ) {
-    calculateMatchups();
-  }
-});
+bindEnterKey(calculateMatchups);
 
 loadTeamFromURL();
 renderTeamInputs();
