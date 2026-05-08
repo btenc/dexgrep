@@ -316,17 +316,6 @@ body.dark .agg-row td.agg-r3 {
 
 /* Mobile */
 @media (max-width: 600px) {
-  input[type="text"] {
-    width: 100%;
-    box-sizing: border-box;
-  }
-
-  .filter-row {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
-
   fieldset {
     padding: 6px;
   }
