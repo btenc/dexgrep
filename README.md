@@ -8,7 +8,7 @@ Visit at: https://dexgrep.com/ or clone and run locally (see below).
 ## Tools - More information and examples below
 
 - **Pokémon Search**: filter all Pokémon that match specified criteria, highly configurable
-- **Team Type Matchups**: enter a team and see each member's weaknesses and resistances, with aggregate counts
+- **Team Matchup Calculator**: enter a team and see each member's weaknesses and resistances, with aggregate counts
 
 ## Running Locally
 
@@ -71,7 +71,7 @@ Create simple or complex queries that return all Pokémon that match the constra
 - **Protean / Libero / Forecast / Multitype / RKS System**: type changes dynamically
 - **Fluffy** (contact halving part, fire weakness is used), **Soundproof**, **Bulletproof**: move-specific, not type-specific
 
-## Team Type Matchups
+## Team Matchup Calculator
 
 Show an analysis / breakdown of the entered team's weaknesses and resistances.
 
