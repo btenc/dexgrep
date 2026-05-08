@@ -123,7 +123,6 @@ function renderNameFilterRow(f, gi) {
       ${f.texts.map((text, ti) => renderNameFilterText(text, gi, ti)).join("")}
       <br>
       <button onclick="addTextToNameFilter(${gi})">+ or</button>
-      &nbsp;
       <button onclick="nameFilters.splice(${gi},1);renderNameFilters()">- row</button>
     </div>
   `;
@@ -181,7 +180,6 @@ function renderPokemonTypeFilterRow(filter, gi) {
       ${filter.types.map((type, ti) => renderTypeSelect(type, gi, ti)).join("")}
       <br>
       <button onclick="addTypeToPokemonTypeRow(${gi})">+ or</button>
-      &nbsp;
       <button onclick="pokemonTypeFilters.splice(${gi},1);renderPokemonTypeRows()">- row</button>
     </div>
   `;
@@ -253,7 +251,6 @@ function renderMoveGroupRow(group, gi) {
       ${group.moves.map((move, mi) => renderMoveEntry(move, gi, mi)).join("")}
       <br>
       <button onclick="addMoveToGroup(${gi})">+ or</button>
-      &nbsp;
       <button onclick="moveGroups.splice(${gi},1);renderMoveRows()">- row</button>
     </div>
   `;
@@ -354,7 +351,7 @@ function renderStatFilterRow(f, i) {
 
   return `
     ${i > 0 ? "<small>AND</small>" : ""}
-    <div>
+    <div class="filter-row">
       <select onchange="statFilters[${i}].stat = this.value">${statOptions}</select>
       <select onchange="statFilters[${i}].op = this.value">${opOptions}</select>
       <input type="text" value="${f.val}" size="5"

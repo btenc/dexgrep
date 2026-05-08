@@ -18,6 +18,7 @@ body.dark fieldset {
 }
 button {
   margin-top: 2px;
+  margin-right: 4px;
 }
 
 body.dark input,
@@ -37,6 +38,8 @@ body.dark .filter-row {
 }
 
 #prog {
+  -webkit-appearance: none;
+  appearance: none;
   width: 100%;
   height: 2px;
   background: #ccc;
@@ -45,6 +48,8 @@ body.dark .filter-row {
 
 #table-wrapper {
   overflow-x: auto;
+  overflow-y: auto;
+  max-height: 80vh;
 }
 
 .tagline {
@@ -72,19 +77,36 @@ body.dark .filter-row {
 }
 
 table {
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   font-size: 12px;
   width: 100%;
 }
 th,
 td {
-  border: 1px solid #ccc;
+  border-bottom: 1px solid #ccc;
+  border-right: 1px solid #ccc;
   padding: 2px 6px;
+}
+th:first-child,
+td:first-child {
+  border-left: 1px solid #ccc;
+}
+thead th {
+  border-top: 1px solid #ccc;
 }
 th {
   white-space: nowrap;
   text-transform: uppercase;
   font-size: 11px;
+}
+thead th {
+  position: sticky;
+  top: 0;
+  background: #fff;
+}
+body.dark thead th {
+  background: #1a1a1a;
 }
 #results-table th[onclick] {
   cursor: pointer;
@@ -181,7 +203,6 @@ th.sort-desc::after {
 }
 
 .validators img {
-  border: 0;
   width: 88px;
   height: 31px;
 }
