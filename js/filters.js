@@ -14,12 +14,12 @@ async function loadFilters() {
   );
 
   for (const { id, name, gen, category, names } of results) {
-    FILTERS[id] = names;
-    FILTER_META[id] = { gen, name, category };
+    FILTER_DATA[id] = { name, category, gen, pokemon: new Set(names) };
   }
 }
 
 const filtersReady = loadFilters().catch((e) => {
   console.error("failed to load filters:", e);
+  filtersLoadFailed = true;
   setStatus("error: failed to load filters");
 });

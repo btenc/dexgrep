@@ -8,11 +8,5 @@
     "id": "johto-100",
     "name": "New in Johto (152-251)",
     "category": "Pokédex"
-  },
-  {
-    "id": "vgc-reg-ma",
-    "name": "VGC 2026 Reg M-A",
-    "gen": 9,
-    "category": "VGC"
   }
 ]

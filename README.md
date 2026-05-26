@@ -42,6 +42,7 @@ Create simple or complex queries that return all Pokémon that match the constra
 - **Ability**: filter by ability name, OR-able
 - **Stats**: numeric comparisons on any stat, BST, or dex #, AND-able
 - **Filters**: limit results to one or more competitive formats or curated Pokédex lists, AND-able across categories
+- **Format + Usage**: select a Smogon usage stats month and format to filter results to only Pokémon present in that format and show their usage % in the results
 
 ### Examples
 
@@ -94,7 +95,9 @@ The grid shows each Pokémon's defensive matchup against all 18 types. Aggregate
 
 ## Data
 
-Fetched from [PokéAPI](https://pokeapi.co) and cached to your browser's localStorage. Hit "refresh data" to re-fetch from the API (this is limited to once per day).
+Pokémon data is fetched from [PokéAPI](https://pokeapi.co) and cached to your browser's localStorage. Hit "refresh data" to re-fetch from the API (this is limited to once per day).
+
+Usage stats are fetched live from [Smogon](https://www.smogon.com/stats/) when a format is selected.
 
 ## Development
 

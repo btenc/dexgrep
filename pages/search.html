@@ -87,7 +87,34 @@
     </fieldset>
 
     <fieldset>
-      <legend>SORT</legend>
+      <legend>
+        FORMAT + USAGE
+        <small
+          >the number suffix is a minimum rating cutoff: -0 = all players,
+          -1500/-1630/-1760 = that rating or higher only</small
+        >
+      </legend>
+      <select id="format-month" onchange="onFormatMonthChange(this.value)">
+        <option value="">month</option>
+      </select>
+      <select id="format-id" onchange="onFormatChange(this.value)">
+        <option value="">format</option>
+      </select>
+      <label
+        ><input
+          type="checkbox"
+          id="format-all-cutoffs"
+          onchange="onFormatCutoffToggle(this.checked)"
+        />
+        all suffix options</label
+      >
+      <button onclick="clearFormat()">clear</button>
+
+      <small id="format-status"></small>
+    </fieldset>
+
+    <fieldset>
+      <legend>SORT (or click headers on table below)</legend>
       <select id="sort-stat">
         <option value="id">dex#</option>
         <option value="hp">hp</option>
@@ -97,6 +124,7 @@
         <option value="spdef">sp.def</option>
         <option value="speed">speed</option>
         <option value="bst">bst</option>
+        <option value="usage">usage%</option>
       </select>
       <select id="sort-dir">
         <option value="asc">asc</option>
@@ -129,6 +157,7 @@
             <th onclick="sortBy('spdef')" id="th-spdef">sp.def</th>
             <th onclick="sortBy('speed')" id="th-speed">spd</th>
             <th onclick="sortBy('bst')" id="th-bst">bst</th>
+            <th onclick="sortBy('usage')" id="th-usage">usage%</th>
             <th title="immune (0x)">0x</th>
             <th title="quarter damage (0.25x)">0.25x</th>
             <th title="half damage (0.5x)">0.5x</th>
@@ -144,6 +173,7 @@
 
     <script src="../js/shared.js"></script>
     <script src="../js/filters.js"></script>
+    <script src="../js/format.js"></script>
     <script src="../js/search.js"></script>
     <script
       data-goatcounter="https://dexgrep.goatcounter.com/count"

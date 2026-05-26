@@ -1,4 +1,4 @@
-const RESULT_COLS = 17;
+const RESULT_COLS = 18;
 
 // State
 
@@ -22,8 +22,17 @@ function onGenChange(value) {
 }
 
 function renderFilterSets() {
+  if (Object.keys(FILTER_DATA).length === 0) {
+    if (filtersLoadFailed) {
+      document.getElementById("filter-rows").textContent =
+        "error loading filters";
+    } else {
+      document.getElementById("filter-rows").textContent = "loading...";
+    }
+    return;
+  }
   const categories = {};
-  for (const [id, meta] of Object.entries(FILTER_META)) {
+  for (const [id, meta] of Object.entries(FILTER_DATA)) {
     const cat = meta.category || "Other";
     if (!categories[cat]) categories[cat] = [];
     categories[cat].push([id, meta]);
@@ -57,7 +66,7 @@ function renderFilterSets() {
 function onFilterToggle(filterId, checked) {
   if (checked) {
     selectedFilters.add(filterId);
-    const meta = FILTER_META[filterId];
+    const meta = FILTER_DATA[filterId];
     if (meta && meta.gen) {
       selectedGen = meta.gen;
       const genSelect = document.getElementById("gen-select");
@@ -389,6 +398,7 @@ function renderStats() {
 //   &stat=hp.gte.100              AND hp >= 100
 //   &sort=spatk.desc
 //   &filter=vgc-reg-ma
+//   &format=2026-04:gen9vgc2026regma-0
 
 const OP_TO_PARAM = {
   ">": "gt",
@@ -481,6 +491,11 @@ function pushFiltersToURL() {
   // Regulation/format filters (AND-ed)
   for (const id of selectedFilters) {
     params.append("filter", id);
+  }
+
+  // Smogon usage format
+  if (usageYearMonth && usageFormatId) {
+    params.set("format", usageYearMonth + ":" + usageFormatId);
   }
 
   setURLParams(params);
@@ -589,6 +604,7 @@ function loadFiltersFromURL() {
   renderTypeRows();
   renderStats();
   renderAbilities();
+  renderFilterSets();
 }
 
 // Query
@@ -607,11 +623,8 @@ async function runQuery() {
     .filter(Boolean);
 
   const normalizedAbilities = abilityFilter.map(normalizeSlug).filter(Boolean);
-  for (const id of selectedFilters) {
-    loadFilter(id);
-  }
 
-  // Validate before hitting PokeAPI — unknown moves would cause a confusing HTTP 404.
+  // Validate before hitting PokeAPI to avoid HTTP 404.
   const badMoves = unknownMoveNames(allMoveNames);
   const badAbilities = unknownAbilityNames(normalizedAbilities);
 
@@ -645,7 +658,9 @@ async function runQuery() {
     return;
   }
 
-  const unloadedFilters = [...selectedFilters].filter((id) => !filterSets[id]);
+  const unloadedFilters = [...selectedFilters].filter(
+    (id) => !FILTER_DATA[id]?.pokemon,
+  );
   if (unloadedFilters.length > 0) {
     alert("filter not yet loaded, please try again");
     return;
@@ -677,6 +692,9 @@ async function runQuery() {
     }
 
     const fullName = pokeapiName(pokemon);
+
+    // When a Smogon usage format is selected, restrict to Pokemon present in that data.
+    if (usageMap !== null && !usageMap.has(fullName)) return false;
 
     // Resolve types and abilities for the selected gen so all filters below
     // operate on what the pokemon actually was in that generation.
@@ -717,7 +735,7 @@ async function runQuery() {
     }
 
     for (const regId of selectedFilters) {
-      if (!filterSets[regId].has(fullName)) return false;
+      if (!FILTER_DATA[regId].pokemon.has(fullName)) return false;
     }
 
     for (const group of normalizedMoveGroups) {
@@ -812,12 +830,15 @@ async function runQuery() {
   const sortStat = document.getElementById("sort-stat").value;
   const sortDir = document.getElementById("sort-dir").value;
   results.sort((a, b) => {
-    const valA = statValue(a.genPokemon, sortStat);
-    const valB = statValue(b.genPokemon, sortStat);
-    if (sortDir === "asc") {
-      return valA - valB;
+    let valA, valB;
+    if (sortStat === "usage") {
+      valA = usageMap ? (usageMap.get(pokeapiName(a.pokemon)) ?? 0) : 0;
+      valB = usageMap ? (usageMap.get(pokeapiName(b.pokemon)) ?? 0) : 0;
+    } else {
+      valA = statValue(a.genPokemon, sortStat);
+      valB = statValue(b.genPokemon, sortStat);
     }
-    return valB - valA;
+    return sortDir === "asc" ? valA - valB : valB - valA;
   });
 
   pushFiltersToURL();
@@ -879,6 +900,11 @@ function renderResults(results, sortStat, sortDir, normalizedAbilities, gen) {
         })
         .join(", ");
 
+      const usagePct = usageMap
+        ? (usageMap.get(pokeapiName(pokemon)) ?? null)
+        : null;
+      const usageCell = `<td class="sv">${usagePct !== null ? usagePct.toFixed(2) + "%" : "-"}</td>`;
+
       return `<tr>
         <td class="dex">${pokemon.id}</td>
         <td>${escapeHTML(pokemon.baseName)}</td>
@@ -892,6 +918,7 @@ function renderResults(results, sortStat, sortDir, normalizedAbilities, gen) {
         <td class="sv">${genPokemon.stats.spdef}</td>
         <td class="sv">${genPokemon.stats.speed}</td>
         <td class="sv">${bst(genPokemon)}</td>
+        ${usageCell}
         <td>${col(matchupGroups.immune)}</td>
         <td>${col(matchupGroups.quarter)}</td>
         <td>${col(matchupGroups.half)}</td>
@@ -920,6 +947,7 @@ function sortBy(stat) {
 // Reset
 
 function reset() {
+  clearFormat();
   selectedGen = 0;
   nameFilters = [];
   pokemonTypeFilters = [];
@@ -979,11 +1007,24 @@ bindEnterKey(runQuery);
 loadFiltersFromURL();
 
 // Once both filters index and pokemon data are loaded, restore regulation and auto-run
-Promise.all([filtersReady, loadData()])
-  .then(() => {
+Promise.all([filtersReady, loadData(), formatMonthsReady])
+  .then(async () => {
     const params = new URLSearchParams(window.location.search);
+
+    // Restore Smogon usage format if present in URL
+    const formatParam = params.get("format");
+    if (formatParam) {
+      const sep = formatParam.indexOf(":");
+      if (sep !== -1) {
+        await restoreFormat(
+          formatParam.slice(0, sep),
+          formatParam.slice(sep + 1),
+        );
+      }
+    }
+
     for (const reg of params.getAll("filter")) {
-      if (FILTER_META[reg]) {
+      if (FILTER_DATA[reg]) {
         selectedFilters.add(reg);
       }
     }
