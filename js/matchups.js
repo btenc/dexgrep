@@ -92,10 +92,7 @@ function loadTeamFromURL() {
 }
 
 function calculateMatchups() {
-  if (!isReady) {
-    alert("still loading");
-    return;
-  }
+  if (!isReady) return;
 
   const gen = selectedMatchupsGen;
 

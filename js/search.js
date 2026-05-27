@@ -610,10 +610,7 @@ function loadFiltersFromURL() {
 // Query
 
 async function runQuery() {
-  if (!isReady) {
-    alert("still loading");
-    return;
-  }
+  if (!isReady) return;
 
   const gen = selectedGen;
 
@@ -1003,10 +1000,11 @@ function loadExample() {
 
 bindEnterKey(runQuery);
 
-// Render filter UI immediately (regulation dropdown may not be ready yet)
+// Render filter UI immediately (shows "loading..." until filtersReady resolves)
 loadFiltersFromURL();
+filtersReady.then(() => renderFilterSets());
 
-// Once both filters index and pokemon data are loaded, restore regulation and auto-run
+// Once filters, pokemon data, and format months are all loaded, restore URL state and auto-run
 Promise.all([filtersReady, loadData(), formatMonthsReady])
   .then(async () => {
     const params = new URLSearchParams(window.location.search);

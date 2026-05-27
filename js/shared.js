@@ -635,19 +635,23 @@ function setProgress(value) {
   }
 }
 
+function readyStatus() {
+  const date = storageGet(CACHE_KEY + "_date");
+  let text = `ready - ${Object.keys(pokemonDatabase).length} pokemon`;
+  if (date) text += ` - cached ${date}`;
+  return text;
+}
+
 function onReady() {
   isReady = true;
   buildDataLists();
   setProgress(100);
-  const date = storageGet(CACHE_KEY + "_date");
-  let statusText = `ready - ${Object.keys(pokemonDatabase).length} pokemon`;
-  if (date) {
-    statusText += ` - cached locally on ${date}`;
-  }
-  setStatus(statusText);
+  document.body.classList.remove("loading");
+  setStatus(readyStatus());
 }
 
 async function loadData() {
+  document.body.classList.add("loading");
   setStatus("loading...");
 
   // If cache key is missing or outdated, wipe all dg* data and force a fresh fetch
@@ -779,13 +783,7 @@ function refreshData() {
       localStorage.removeItem(key);
     }
   }
-  pokemonDatabase = {};
-  cachedMoveTypes = {};
-  isReady = false;
-  setProgress(0);
-  loadData().catch((e) => {
-    setStatus("error: " + e.message);
-  });
+  window.location.reload();
 }
 
 // Dark mode
@@ -822,7 +820,7 @@ function injectLayout() {
   let statusBar = "";
   if (!isHome) {
     statusBar =
-      '<small id="status"></small><progress id="prog" value="0" max="100"></progress>';
+      '<div id="status-bar"><small id="status"></small><progress id="prog" value="0" max="100"></progress></div>';
   }
 
   const headerEl = document.getElementById("site-header");

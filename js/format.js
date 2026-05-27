@@ -90,27 +90,35 @@ let allFormatIds = []; // full list for the selected month, before cutoff filter
 // Fetches the month list and populates the month <select> on page load.
 // Returns a promise so search.js can wait for it before restoring URL state.
 async function initFormatMonthDropdown() {
-  const select = document.getElementById("format-month");
-  if (!select) return;
-  const statusEl = document.getElementById("format-status");
-  if (statusEl) statusEl.textContent = "loading...";
+  const monthSelect = document.getElementById("format-month");
+  const formatSelect = document.getElementById("format-id");
+  if (!monthSelect) return;
+
+  // Disable both selects during the initial month-list fetch.
+  // Option text is used for state instead of #format-status, because clearFormat()
+  // clears status text but only sets monthEl.value="" (never rewrites innerHTML).
+  monthSelect.disabled = true;
+  monthSelect.innerHTML = '<option value="">loading...</option>';
+  if (formatSelect) formatSelect.disabled = true;
+
   const html = await smogonFetch(SMOGON_STATS_URL + "/");
-  // Links look like "2026-04/" - strip the trailing slash, show newest first.
   const months = parseLinks(html, /^\d{4}-\d{2}\/$/)
     .map((h) => h.slice(0, -1))
     .reverse();
-  select.innerHTML =
+  monthSelect.innerHTML =
     '<option value="">month</option>' +
     months
       .map((m) => `<option value="${escapeHTML(m)}">${escapeHTML(m)}</option>`)
       .join("");
-  if (statusEl) statusEl.textContent = "";
+  monthSelect.disabled = false;
+  // format select stays disabled until user picks a month
 }
 
 const formatMonthsReady = initFormatMonthDropdown().catch((e) => {
   console.warn("[format] Could not load month list:", e.message);
   const select = document.getElementById("format-month");
   if (select) select.innerHTML = '<option value="">unavailable</option>';
+  // leave select.disabled = true — the month list failed, the dropdown is unusable
 });
 
 // Event handlers
@@ -140,29 +148,28 @@ async function onFormatMonthChange(yearMonth) {
   const formatSelect = document.getElementById("format-id");
   const statusEl = document.getElementById("format-status");
 
-  // Clear previous state
   usageMap = null;
   usageFormatId = null;
   usageYearMonth = yearMonth || null;
   allFormatIds = [];
+  formatSelect.disabled = true;
   formatSelect.innerHTML = '<option value="">format</option>';
   statusEl.textContent = "";
 
   if (!yearMonth) return;
 
-  statusEl.textContent = "loading...";
+  formatSelect.innerHTML = '<option value="">loading...</option>';
   try {
     const html = await smogonFetch(`${SMOGON_STATS_URL}/${yearMonth}/`);
-    // Links look like "gen9vgc2026regma-0.txt" : strip the .txt extension.
     allFormatIds = parseLinks(html, /\.txt$/)
       .map((h) => h.slice(0, -4))
       .reverse();
     const showAll =
       document.getElementById("format-all-cutoffs")?.checked || false;
     populateFormatDropdown(showAll);
-    statusEl.textContent = "";
+    formatSelect.disabled = false;
   } catch (e) {
-    statusEl.textContent = "not found";
+    formatSelect.innerHTML = '<option value="">not found</option>';
     console.warn("[format] Failed to load formats for", yearMonth, e.message);
   }
 }
@@ -238,7 +245,10 @@ function clearFormat() {
   const statusEl = document.getElementById("format-status");
   const cutoffsEl = document.getElementById("format-all-cutoffs");
   if (monthEl) monthEl.value = "";
-  if (formatEl) formatEl.innerHTML = '<option value="">format</option>';
+  if (formatEl) {
+    formatEl.disabled = true;
+    formatEl.innerHTML = '<option value="">format</option>';
+  }
   if (statusEl) statusEl.textContent = "";
   if (cutoffsEl) cutoffsEl.checked = false;
 }
