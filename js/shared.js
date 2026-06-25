@@ -1,6 +1,6 @@
 // Constants
 
-const SITE_UPDATED = "2026-05-26";
+const SITE_UPDATED = "2026-06-24";
 
 // Gen 6+ (current): 18 types including Fairy.
 // prettier-ignore
@@ -119,6 +119,20 @@ const TYPE_MATCHUP_ABILITIES = new Set([
 
 // Generation data
 
+// Champions is its own generation tier, kept separate from the numbered mainline
+// generations. Each move stores which generations can learn it as bits in a
+// 32-bit integer, where generation N is bit (N - 1):
+//   gen 1  -> bit 0
+//   gen 9  -> bit 8
+//   gen 31 -> bit 30
+// JavaScript bitwise math is signed 32-bit, so bit 31 is the sign bit and must
+// stay unused (setting it would make the value negative). Bit 30 is therefore the
+// highest usable bit, and it maps to generation 31, so that is the number we give
+// Champions. This also keeps bits 9 through 29 (generations 10 through 30) free
+// for future mainline generations. The value is not a real "31st generation"; it
+// is just the top reserved bit.
+const CHAMPIONS_GEN = 31;
+
 // Maps PokeAPI version group names to their generation number.
 // prettier-ignore
 const VERSION_GROUP_TO_GEN = {
@@ -141,7 +155,17 @@ const VERSION_GROUP_TO_GEN = {
   "brilliant-diamond-shining-pearl": 8, "legends-arceus": 8,
   // Gen 9
   "scarlet-violet": 9, "the-teal-mask": 9, "the-indigo-disk": 9,
+  // Champions (own tier; shares gen 9 mechanics)
+  "champions": CHAMPIONS_GEN,
 };
+
+// Human-readable label for a generation number (champions is not a numeric gen).
+function genLabel(gen) {
+  if (gen === CHAMPIONS_GEN) {
+    return "champions";
+  }
+  return `gen ${gen}`;
+}
 
 // Maps PokeAPI generation names (used in past_types / past_abilities / past_stats) to numbers.
 // prettier-ignore
@@ -156,6 +180,7 @@ const GENERATION_NUMBER = {
 const GENERATION_MAX_DEX = {
   1: 151, 2: 251, 3: 386, 4: 493,
   5: 649, 6: 721, 7: 809, 8: 905, 9: 1025,
+  [CHAMPIONS_GEN]: Infinity, // champions is not tied to the gen 9 roster, so no dex limit
 };
 
 // Populated asynchronously by filters.js from filters/index.json.
@@ -379,7 +404,7 @@ function statValue(pokemon, key) {
 
 const POKEAPI = "https://pokeapi.co/api/v2";
 // Increment this to bust all locally cached Pokémon data (e.g. after a schema change).
-const CACHE_KEY = "dg3";
+const CACHE_KEY = "dg4";
 
 // prettier-ignore
 const POKEAPI_STAT_KEYS = {
@@ -482,6 +507,10 @@ function pokemonExistsInGen(pokemon, gen) {
   if (pokemon.form) {
     const moveBits = Object.values(pokemon.moves);
     if (moveBits.length > 0) {
+      // Bitmask of every generation up to `gen`. At CHAMPIONS_GEN (31) this is
+      // (1 << 31) - 1, which in signed 32-bit math is 0x7FFFFFFF: bits 0 through
+      // 30, i.e. all real generations including champions. A form counts as
+      // existing if it can learn any move within that range.
       const mask = (1 << gen) - 1;
       if (!moveBits.some((bits) => (bits & mask) !== 0)) return false;
     } else {

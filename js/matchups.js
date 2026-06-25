@@ -1,4 +1,4 @@
-let selectedMatchupsGen = 0; // 0 = no generation mechanics; 1–9 = specific generation
+let selectedMatchupsGen = 0; // 0 = no generation mechanics; 1-9 = specific generation; CHAMPIONS_GEN (31) = champions tier
 
 let team = Array.from({ length: 6 }, () => ({ name: "", ability: "" }));
 

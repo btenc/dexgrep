@@ -2,7 +2,7 @@ const RESULT_COLS = 18;
 
 // State
 
-let selectedGen = 0; // 0 = no generation mechanics; 1–9 = specific generation
+let selectedGen = 0; // 0 = no generation mechanics; 1-9 = specific generation; CHAMPIONS_GEN (31) = champions tier
 
 let nameFilters = []; // [{ mode: "includes"|"excludes", texts: [] }]
 let pokemonTypeFilters = []; // [{ mode: "is"|"is-not", types: [] }]
@@ -648,7 +648,7 @@ async function runQuery() {
     issues.push("abilities did not exist until gen 3");
   }
   if (movesNotInGen.length) {
-    issues.push(`move not in gen ${gen}: ` + movesNotInGen.join(", "));
+    issues.push(`move not in ${genLabel(gen)}: ` + movesNotInGen.join(", "));
   }
   if (issues.length) {
     alert(issues.join("\n"));
@@ -972,8 +972,8 @@ function reset() {
 function loadExample() {
   reset();
 
-  selectedGen = 9;
-  document.getElementById("gen-select").value = 9;
+  selectedGen = CHAMPIONS_GEN;
+  document.getElementById("gen-select").value = CHAMPIONS_GEN;
 
   moveGroups = [
     {
